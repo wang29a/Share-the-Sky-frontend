@@ -1,15 +1,4 @@
 <template>
-  <!-- <n-form ref="loginForm" @submit="submitForm">
-    <n-form-item label="用户名">
-      <n-input v-model:value="loginForm.username" placeholder="请输入用户名"></n-input>
-    </n-form-item>
-    <n-form-item label="密码">
-      <n-input type="password" v-model:value="loginForm.password" placeholder="请输入密码"></n-input>
-    </n-form-item>
-    <n-form-item>
-      <n-button type="primary" native-type="submit">登录</n-button>
-    </n-form-item>
-  </n-form> -->
   <n-card>
     <n-tabs
       class="card-tabs"
@@ -54,7 +43,7 @@
 
 <script>
 import axios from 'axios';
-import { ref } from 'vue';
+import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 export default {
   name: 'Login',
@@ -79,7 +68,7 @@ export default {
       .then(response => {
         console.log(response.data);
         // 处理响应，例如保存 token、跳转到其他页面等
-        const token = sessionStorage.getItem('userToken');
+        sessionStorage.setItem('userToken', response.data.token);
         router.push({name: 'Home'});
       })
       .catch(error => {
@@ -102,6 +91,13 @@ export default {
         // 处理错误，例如显示错误消息
       });
     };
+    const checkLoginStatus = () => {
+      const token = sessionStorage.getItem('userToken');
+      console.log("check Login Status")
+      if (token) {
+        router.push({ name: 'Home' });
+      }
+    }
 
     // 定义提交登录表单方法
     const submitLoginForm = () => {
@@ -139,6 +135,10 @@ export default {
       register();
     };
 
+    onMounted(() => {
+      checkLoginStatus();
+    });
+
     // 返回需要在模板中使用的数据和方法
     return {
       loginForm,
@@ -147,66 +147,5 @@ export default {
       submitSignForm,
     };
   },
-  // data() {
-  //   return {
-  //     loginForm: {
-  //       username: '',
-  //       password: ''
-  //     },
-  //     signForm: {
-  //       username: '',
-  //       password1: '',
-  //       password2: ''
-  //     }
-  //   }
-  // },
-  // methods: {
-  //   submitLoginForm() {
-  //     console.log(this.loginForm);
-  //     // 在这里添加登录逻辑
-  //     if (this.loginForm.username.trim() === '') {
-  //       alert('请输入用户名');
-  //       return;
-  //     }
-  //     if (this.loginForm.password.trim() === '') {
-  //       alert('请输入密码');
-  //       return;
-  //     }
-
-  //     // 继续后续逻辑
-  //     this.login();
-  //   }, 
-  //   submitSignFrom() {
-  //     console.log(this.signForm);
-
-  //     if (this.loginForm.username.trim() === '') {
-  //       alert('请输入用户名');
-  //       return;
-  //     }
-  //     if (this.loginForm.password.trim() === '') {
-  //       alert('请输入密码');
-  //       return;
-  //     }
-  //     if (this.loginForm.password1.trim() === this.loginForm.password2.trim()) {
-  //       alert('请输入密码');
-  //       return;
-  //     }
-
-  //   },
-  //   login() {
-  //     axios.post('/drogon/user/login', {
-  //       userName: this.loginForm.username,
-  //       passWord: this.loginForm.password
-  //     })
-  //     .then(response => {
-  //       console.log(response.data);
-  //       // 处理响应，例如保存 token、跳转到其他页面等
-  //     })
-  //     .catch(error => {
-  //       console.error('登录失败:', error);
-  //       // 处理错误，例如显示错误消息
-  //     });
-  //   }
-  // }
 }
 </script>
