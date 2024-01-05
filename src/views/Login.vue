@@ -66,10 +66,14 @@ export default {
         passWord: loginForm.value.password
       })
       .then(response => {
-        console.log(response.data);
-        // 处理响应，例如保存 token、跳转到其他页面等
-        sessionStorage.setItem('userToken', response.data.token);
-        router.push({name: 'Home'});
+        if (response.data.status == true) {
+          console.log("response",response.data);
+          console.log("response token",response.data.data.userId);
+          // 处理响应，例如保存 token、跳转到其他页面等
+          sessionStorage.setItem('userToken', response.data.data.userId);
+          console.log("userToken:", sessionStorage.getItem('userToken'))
+          router.push({name: 'Home'});
+        }
       })
       .catch(error => {
         console.error('登录失败:', error);
@@ -93,7 +97,7 @@ export default {
     };
     const checkLoginStatus = () => {
       const token = sessionStorage.getItem('userToken');
-      console.log("check Login Status")
+      console.log("check Login Status, token:", sessionStorage.getItem('userToken'))
       if (token) {
         router.push({ name: 'Home' });
       }

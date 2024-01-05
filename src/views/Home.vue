@@ -41,10 +41,12 @@
 <script>
 import { h, defineComponent, ref, onMounted } from "vue";
 import { NButton } from "naive-ui";
+import { useRouter } from 'vue-router';
 import axios from 'axios';
 
 export default defineComponent({
   setup() {
+    const router = useRouter();
     const data = ref([]);
     const selectedFile = ref(null);
     const fileInput = ref(null);
@@ -52,23 +54,37 @@ export default defineComponent({
 
     const fetchFiles = async () => {
       try {
+        console.log("get file list");
+        console.log("check Login Status, token:", sessionStorage.getItem('userToken'));
+        const userToken = sessionStorage.getItem('userToken');
+        console.log("path:", "/");
         const response = await 
-        axios.post('/file/list', {path:"/img"});
-
+        axios.post('/file/list', {path:"/", userId:userToken});
         data.value = response.data; // 使用后端返回的文件列表
       } catch (error) {
         console.error('获取文件列表失败:', error);
       }
     };
 
+    const checkLoginStatus = () => {
+      const token = sessionStorage.getItem('userToken');
+      console.log("check Login Status, token:", sessionStorage.getItem('userToken'))
+      if (token == null) {
+        router.push({ name: 'Login' });
+      }
+    }
+    
     onMounted(fetchFiles);
+    onMounted(checkLoginStatus);
 
     const downloadFile = (row) => {
       // 实现下载文件的逻辑
-      console.log("下载文件:", row.fileName, row.MD5);
+      const userToken = sessionStorage.getItem('userToken');
+      console.log("下载文件:", row.fileName, row.fileId, userToken);
       axios.get('/file/download', {
         params: {
-          "MD5": row.MD5
+          userid: userToken,
+          fileid: row.fileId
         },
         responseType: 'blob' // 重要: 设置响应类型为 blob
       }).then(response => {
@@ -103,7 +119,10 @@ export default defineComponent({
         formData.append('file', selectedFile.value);
         console.log("file:", selectedFile.value)
         console.log("path:", uploadPath.value)
+        console.log("userId:", sessionStorage.getItem("userToken"))
+        const userToken = sessionStorage.getItem('userToken');
         formData.append('path', uploadPath.value); // 添加上传路径到 FormData
+        formData.append('userId', userToken); // 添加上传路径到 FormData
         axios.post('/file/add', formData, {
           headers: {
             'Content-Type': 'multipart/form-data'
@@ -116,6 +135,7 @@ export default defineComponent({
       } else {
         console.log('请选择文件和设置上传路径');
       }
+      fetchFiles();
     };
 
     const createColumns = () => {
