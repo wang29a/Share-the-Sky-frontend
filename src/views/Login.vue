@@ -71,6 +71,7 @@ export default {
           console.log("response token",response.data.data.userId);
           // 处理响应，例如保存 token、跳转到其他页面等
           sessionStorage.setItem('userToken', response.data.data.userId);
+          sessionStorage.setItem('isAdmin', response.data.data.permission);
           console.log("userToken:", sessionStorage.getItem('userToken'))
           router.push({name: 'Home'});
         }

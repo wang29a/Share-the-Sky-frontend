@@ -9,6 +9,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@vicons/ionicons4": "^0.12.0",
     "@vicons/ionicons5": "^0.12.0",
     "axios": "^1.6.3",
     "element-plus": "^2.4.4",

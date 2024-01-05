@@ -1,25 +1,39 @@
 <template>
+  <n-page-header subtitle="「同一片天空下」" @back="handleBack">
+    <template #title>
+      <a
+        href="https://github.com/bridge71/Share-the-Sky"
+        style="text-decoration: none; color: inherit"
+      >Share-the-Sky</a>
+    </template>
+    <!-- <template #footer>
+      <n-breadcrumb>
+        <n-breadcrumb-item :clickable="true" :href="1">播客</n-breadcrumb-item>
+        <n-breadcrumb-item>精选</n-breadcrumb-item>
+        <n-breadcrumb-item>超级精选</n-breadcrumb-item>
+        <n-breadcrumb-item>Share-the-Sky</n-breadcrumb-item>
+      </n-breadcrumb>
+    </template> -->
+    <template #extra>
+      <n-space>
+      <n-dropdown :options="options" @select="handleSelect">
+        <n-button>用户</n-button>
+      </n-dropdown>
+      </n-space>
+    </template>
+    <!-- <template #avatar>
+      <n-avatar
+        src="https://cdnimg103.lizhi.fm/user/2017/02/04/2583325032200238082_160x160.jpg"
+      />
+    </template> -->
+  </n-page-header>
     <n-layout>
-      <n-layout-header>
-        <n-menu mode="horizontal">
-          <n-menu-item>首页</n-menu-item>
-          <n-menu-item>关于</n-menu-item>
-          <!-- 其他导航项 -->
-        </n-menu>
-        <!-- 用户信息、登出按钮等 -->
-      </n-layout-header>
-  
       <n-layout-content style="padding: 24px;">
-        <div>
+        <!-- <div>
           <n-upload >
             <n-button @click="upLoadFile">点击上传文件</n-button>
           </n-upload>
-        </div>
-            <!-- <input type="file" @change="handleFileChange" ref="fileInput"> -->
-            <!-- <n-button @click="uploadFile">上传文件</n-button> -->
-  
-        <!-- <n-data-table :columns="columns" :data="fileList">
-        </n-data-table> -->
+        </div> -->
         <div>
           <label for="uploadPath">上传路径:</label>
           <input type="text" id="uploadPath" v-model="uploadPath">
@@ -37,21 +51,35 @@
       </n-layout-content>
     </n-layout>
 </template>
-  
+
 <script>
-import { h, defineComponent, ref, onMounted } from "vue";
-import { NButton } from "naive-ui";
+import { h, defineComponent, computed, onMounted, ref } from "vue";
+import { NIcon, NDropdown, NButton } from "naive-ui";
 import { useRouter } from 'vue-router';
 import axios from 'axios';
+import {
+  PersonCircleOutline as UserIcon,
+  Pencil as EditIcon,
+  LogOutOutline as LogoutIcon
+} from "@vicons/ionicons5";
+
+const renderIcon = (icon) => {
+  return () => {
+    return h(NIcon, null, {
+      default: () => h(icon)
+    });
+  };
+};
 
 export default defineComponent({
   setup() {
     const router = useRouter();
+    const isAdmin = computed(() => sessionStorage.getItem("isAdmin") === "true");
     const data = ref([]);
     const selectedFile = ref(null);
     const fileInput = ref(null);
     const uploadPath = ref(''); // 上传路径
-
+    
     const fetchFiles = async () => {
       try {
         console.log("get file list");
@@ -76,6 +104,7 @@ export default defineComponent({
     
     onMounted(fetchFiles);
     onMounted(checkLoginStatus);
+
 
     const downloadFile = (row) => {
       // 实现下载文件的逻辑
@@ -106,6 +135,15 @@ export default defineComponent({
     const deleteFile = (row) => {
       // 实现删除文件的逻辑
       console.log("删除文件:", row.fileName);
+      const userToken = sessionStorage.getItem("userToken")
+      axios.post('file/delete', {
+        "userId":userToken,
+        "fileId":row.fileId
+      }).then(response => {
+        console.log("删除成功", response);
+      }).catch(error => {
+        console.log("删除失败", error);
+      });
     };
 
     // 处理文件选择事件
@@ -180,6 +218,64 @@ export default defineComponent({
       ];
     };
 
+
+    const handleSelect = (key) => {
+      console.log("key:", key)
+      switch (key) {
+        case 'profile':
+          // 执行查看用户资料的逻辑
+          console.log('查看用户资料');
+          break;
+        case 'editProfile':
+          // 执行编辑用户资料的逻辑
+          console.log('编辑用户资料');
+          router.push('/edit-profile');
+          break;
+        case 'admin':
+          // 后台管理
+          // sessionStorage.setItem("isAdmin", true);
+          console.log('后台管理');
+          if (isAdmin.value) {
+            router.push('/admin');
+          }
+          break;
+        case 'logout':
+          // 执行退出登录的逻辑
+          console.log('退出登录');
+          sessionStorage.removeItem("userToken");
+          sessionStorage.removeItem("isAdmin");
+          router.push('/login');
+          break;
+        default:
+          console.log('未知操作');
+      }
+    };
+
+    const options = computed(() => [
+      {
+        label: "用户资料",
+        key: "profile",
+        icon: renderIcon(UserIcon)
+      },
+      {
+        label: "编辑用户资料",
+        key: "editProfile",
+        icon: renderIcon(EditIcon)
+      },
+      {
+        label: "后台管理",
+        key: "admin",
+        icon: renderIcon(EditIcon),
+        show: isAdmin.value
+      },
+      {
+        label: "退出登录",
+        key: "logout",
+        icon: renderIcon(LogoutIcon)
+      }
+    ]);
+
+        
     return {
       data,
       columns: createColumns(),
@@ -189,6 +285,8 @@ export default defineComponent({
       uploadPath,
       upLoadFile,
       handleFileChange,
+      options,
+      handleSelect,
     };
   }
 });
