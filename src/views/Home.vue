@@ -6,14 +6,6 @@
         style="text-decoration: none; color: inherit"
       >Share-the-Sky</a>
     </template>
-    <!-- <template #footer>
-      <n-breadcrumb>
-        <n-breadcrumb-item :clickable="true" :href="1">播客</n-breadcrumb-item>
-        <n-breadcrumb-item>精选</n-breadcrumb-item>
-        <n-breadcrumb-item>超级精选</n-breadcrumb-item>
-        <n-breadcrumb-item>Share-the-Sky</n-breadcrumb-item>
-      </n-breadcrumb>
-    </template> -->
     <template #extra>
       <n-space>
       <n-dropdown :options="options" @select="handleSelect">
@@ -50,6 +42,18 @@
         />
       </n-layout-content>
     </n-layout>
+  <n-modal v-model:show="shareModelShowModel.value">
+    <n-card
+      style="width: 600px"
+      title="文件分享链接"
+      :bordered="false"
+      size="huge"
+      role="dialog"
+      aria-modal="true"
+    >
+      {{ shareHref }}
+    </n-card>
+  </n-modal>
 </template>
 
 <script>
@@ -60,7 +64,9 @@ import axios from 'axios';
 import {
   PersonCircleOutline as UserIcon,
   Pencil as EditIcon,
-  LogOutOutline as LogoutIcon
+  LogOutOutline as LogoutIcon,
+  FolderOutline as FolderIcon,
+  DocumentTextOutline as FileIcon
 } from "@vicons/ionicons5";
 
 const renderIcon = (icon) => {
@@ -79,15 +85,17 @@ export default defineComponent({
     const selectedFile = ref(null);
     const fileInput = ref(null);
     const uploadPath = ref(''); // 上传路径
+    const shareHref = ref('');
+    const shareModelShowModel = ref([]);
     
     const fetchFiles = async () => {
       try {
         console.log("get file list");
         console.log("check Login Status, token:", sessionStorage.getItem('userToken'));
-        const userToken = sessionStorage.getItem('userToken');
+        const root = sessionStorage.getItem('root');
         console.log("path:", "/");
         const response = await 
-        axios.post('/file/list', {path:"/", userId:userToken});
+        axios.post('/file/list', {path:"/", folderId: parseInt(root)});
         data.value = response.data; // 使用后端返回的文件列表
       } catch (error) {
         console.error('获取文件列表失败:', error);
@@ -146,6 +154,22 @@ export default defineComponent({
       });
     };
 
+    const shareFile = (row) => {
+      // 实现分享文件的逻辑
+      console.log("分享文件:", row.fileName);
+      const userToken = sessionStorage.getItem("userToken")
+      // axios.post('share/', {
+      //   "userId":userToken,
+      //   "fileId":row.fileId
+      // }).then(response => {
+        // console.log("分享成功", response);
+        console.log("分享成功");
+        shareModelShowModel.value = true;
+      // }).catch(error => {
+      //   console.log("分享失败", error);
+      // });
+    };
+
     // 处理文件选择事件
     const handleFileChange = (event) => {
       selectedFile.value = event.target.files[0];
@@ -176,48 +200,104 @@ export default defineComponent({
       fetchFiles();
     };
 
+    const enterFolder = async (folder) => {
+      console.log("进入文件夹:", folder.folderName);
+      console.log("userId:", sessionStorage.getItem('userToken'));
+      console.log("path:", );
+      console.log("folderId:", folder.folderId);
+      // 更新文件列表以显示文件夹内容
+      try {
+          const userToken = sessionStorage.getItem('userToken');
+          const response = await axios.post('/file/list', {
+            // userId: userToken,
+            folderId: parseInt(folder.folderId) // 假设 folder 对象有 folderId 属性
+          });
+          data.value = response.data; // 更新文件列表
+        } catch (error) {
+          console.error('获取文件列表失败:', error);
+        }
+    };
+
     const createColumns = () => {
       return [
         {
-          title: "文件名",
-          key: "fileName"
+          title: "名称",
+          key: "name",
+          render(row) {
+            const isFolder = row.type === "0"; // 假设 0 代表文件夹
+            return h(
+              'div',
+              null,
+              [
+                h(
+                  NIcon,
+                  { size: '20' }, // 例如设置图标大小为 20
+                  { default: () => isFolder ? h(FolderIcon) : h(FileIcon) }
+                ),
+                h('span', null, isFolder ? row.folderName : row.fileName)
+              ]
+            );
+          }
         },
-        {
-          title: "类型",
-          key: "fileType"
-        },
+        // {
+        //   title: "类型",
+        //   key: "fileType"
+        // },
         {
           title: "操作",
           key: "actions",
           render(row) {
-            return [
-              h(
+            const isFolder = row.type === "0"; // 假设 0 代表文件夹
+            if (isFolder) {
+              return h(
                 NButton,
                 {
                   strong: true,
                   tertiary: true,
                   size: "small",
-                  onClick: () => downloadFile(row)
+                  onClick: () => enterFolder(row)
                 },
-                { default: () => "Download" }
-              ),
-              h(
-                NButton,
-                {
-                  strong: true,
-                  tertiary: true,
-                  type: "error",
-                  size: "small",
-                  onClick: () => deleteFile(row)
-                },
-                { default: () => "Delete" }
-              )
-            ];
+                { default: () => "进入" }
+              );
+            } else {
+              return [
+                h(
+                  NButton,
+                  {
+                    strong: true,
+                    tertiary: true,
+                    size: "small",
+                    onClick: () => downloadFile(row)
+                  },
+                  { default: () => "下载" }
+                ),
+                h(
+                  NButton,
+                  {
+                    strong: true,
+                    tertiary: true,
+                    size: "small",
+                    onClick: () => shareFile(row)
+                  },
+                  { default: () => "分享" }
+                ),
+                h(
+                  NButton,
+                  {
+                    strong: true,
+                    tertiary: true,
+                    type: "error",
+                    size: "small",
+                    onClick: () => deleteFile(row)
+                  },
+                  { default: () => "删除" }
+                )
+              ];
+            }
           }
         }
       ];
     };
-
 
     const handleSelect = (key) => {
       console.log("key:", key)
@@ -287,6 +367,7 @@ export default defineComponent({
       handleFileChange,
       options,
       handleSelect,
+      shareModelShowModel
     };
   }
 });
