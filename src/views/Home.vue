@@ -34,6 +34,18 @@
           <input type="file" @change="handleFileChange" ref="fileInput">
           <n-button @click="upLoadFile">上传文件</n-button>
         </div>
+
+        <n-button @click="goBack">返回上一层</n-button>
+        <n-breadcrumb>
+          <n-breadcrumb-item
+            v-for="(item, index) in currentPath"
+            :key="index"
+            @click="navigateTo(item, index)"
+          >
+            {{ item.name }}
+          </n-breadcrumb-item>
+        </n-breadcrumb>
+
         <n-data-table
           :columns="columns"
           :data="data"
@@ -87,6 +99,7 @@ export default defineComponent({
     const uploadPath = ref(''); // 上传路径
     const shareHref = ref('');
     const shareModelShowModel = ref([]);
+    const currentPath = ref([{ name: '根目录', id: sessionStorage.getItem("root") }]);
     
     const fetchFiles = async () => {
       try {
@@ -216,6 +229,46 @@ export default defineComponent({
         } catch (error) {
           console.error('获取文件列表失败:', error);
         }
+    };
+
+    const navigateTo = async (item, index) => {
+      // 更新当前路径到点击的面包屑项目
+      currentPath.value = currentPath.value.slice(0, index + 1);
+
+      console.log("进入文件夹:", item.name);
+      console.log("userId:", sessionStorage.getItem('userToken'));
+      console.log("path:", );
+      console.log("folderId:", item.id);
+      // 更新文件列表以显示文件夹内容
+      try {
+          const response = await axios.post('/file/list', {
+            // userId: userToken,
+            folderId: parseInt(item.id) // 假设 folder 对象有 folderId 属性
+          });
+          data.value = response.data; // 更新文件列表
+        } catch (error) {
+          console.error('获取文件列表失败:', error);
+        }
+    };
+    
+    const goBack = async () => {
+      if (currentPath.value.length > 1) {
+        currentPath.value.pop(); // 移除当前路径的最后一个元素
+        const currentFolder = currentPath.value[currentPath.value.length - 1];
+        try {
+          // 根据新的当前文件夹获取文件列表
+          // 如果根目录 id 为 null，需要相应处理
+          const folderId = currentFolder.id;
+          // 发送请求获取文件列表
+          const response = await axios.post('/file/list', {
+            // userId: userToken,
+            folderId: parseInt(folderId) // 假设 folder 对象有 folderId 属性
+          });
+          data.value = response.data; // 更新文件列表
+        } catch (error) {
+          console.error('获取文件列表失败:', error);
+        }
+      }
     };
 
     const createColumns = () => {
@@ -367,7 +420,11 @@ export default defineComponent({
       handleFileChange,
       options,
       handleSelect,
-      shareModelShowModel
+      shareModelShowModel,
+      currentPath,
+      enterFolder,
+      navigateTo,
+      goBack,
     };
   }
 });
