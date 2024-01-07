@@ -211,6 +211,7 @@ export default defineComponent({
         console.log('请选择文件和设置上传路径');
       }
       fetchFiles();
+      currentPath.value = currentPath.value.slice(0, 1);
     };
 
     const enterFolder = async (folder) => {
@@ -226,6 +227,7 @@ export default defineComponent({
             folderId: parseInt(folder.folderId) // 假设 folder 对象有 folderId 属性
           });
           data.value = response.data; // 更新文件列表
+          currentPath.value.push({ name: folder.folderName, id: folder.folderId });
         } catch (error) {
           console.error('获取文件列表失败:', error);
         }
