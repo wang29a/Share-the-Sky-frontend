@@ -26,12 +26,16 @@
           <n-form-item-row label="用户名">
             <n-input v-model:value="signForm.username" placeholder="请输入用户名"/>
           </n-form-item-row>
+          <n-form-item-row label="邮箱">
+            <n-input type="email" v-model:value="signForm.email" placeholder="请输入邮箱"/>
+          </n-form-item-row>
           <n-form-item-row label="密码">
             <n-input type="password" v-model:value="signForm.password1" placeholder="请输入密码"/>
           </n-form-item-row>
           <n-form-item-row label="重复密码">
             <n-input type="password" v-model:value="signForm.password2" placeholder="请输入密码"/>
           </n-form-item-row>
+          
         </n-form>
         <n-button type="primary" block secondary strong @click="submitSignForm">
           注册
@@ -56,7 +60,8 @@ export default {
     const signForm = ref({
       username: '',
       password1: '',
-      password2: ''
+      password2: '',
+      email: ''
     });
 
     // 定义登录方法
@@ -66,7 +71,7 @@ export default {
         passWord: loginForm.value.password
       })
       .then(response => {
-        if (response.data.status == true) {
+        if (response.data.status == 0) {
           console.log("response",response.data);
           console.log("response token",response.data.data.userId);
           // 处理响应，例如保存 token、跳转到其他页面等
@@ -86,7 +91,8 @@ export default {
     const register = () => {
       axios.post('/drogon/user/add', {
         userName: signForm.value.username,
-        passWord: signForm.value.password1
+        passWord: signForm.value.password1,
+        email: signForm.value.email
       })
       .then(response => {
         console.log(response.data);
@@ -117,6 +123,7 @@ export default {
         alert('请输入密码');
         return;
       }
+      
       // 继续后续逻辑
       login();
     };
@@ -135,6 +142,10 @@ export default {
       }
       if (signForm.value.password1.trim() !== signForm.value.password2.trim()) {
         alert('两次密码不一致');
+        return;
+      }
+      if (signForm.value.email.trim() === '') {
+        alert('请输入邮箱');
         return;
       }
       // 继续后续逻辑
