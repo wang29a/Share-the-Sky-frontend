@@ -121,6 +121,7 @@ export default defineComponent({
     const shareHref = ref('');
     const shareModelShowModel = ref(false);
     const currentPath = ref([{ name: '根目录', id: sessionStorage.getItem("root") }]);
+    const message = useMessage();
     
     const fetchFiles = async () => {
       try {
@@ -183,6 +184,7 @@ export default defineComponent({
         "fileId":row.fileId
       }).then(response => {
         console.log("删除成功", response);
+        fetchFiles()
       }).catch(error => {
         console.log("删除失败", error);
       });
@@ -234,11 +236,32 @@ export default defineComponent({
           },
         }).then(response => {
           console.log('上传成功', response);
+          fetchFiles();
+        }).catch(error => {
+          console.error('上传失败', error);
+        });
+      } else if(selectedFile.value) {
+        const formData = new FormData();
+        formData.append('file', selectedFile.value);
+        console.log("file:", selectedFile.value)
+        console.log("path:", uploadPath.value)
+        console.log("userId:", sessionStorage.getItem("userToken"))
+        const userToken = sessionStorage.getItem('userToken');
+        formData.append('path', "/"); // 添加上传路径到 FormData
+        formData.append('userId', userToken); // 添加上传路径到 FormData
+        axios.post('/file/add', formData, {
+          headers: {
+            'Content-Type': 'multipart/form-data'
+          },
+        }).then(response => {
+          console.log('上传成功', response);
+          fetchFiles();
         }).catch(error => {
           console.error('上传失败', error);
         });
       } else {
         console.log('请选择文件和设置上传路径');
+        message.error('请选择文件和设置上传路径');
       }
       fetchFiles();
       currentPath.value = currentPath.value.slice(0, 1);
