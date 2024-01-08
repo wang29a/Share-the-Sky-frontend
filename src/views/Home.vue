@@ -54,24 +54,45 @@
         />
       </n-layout-content>
     </n-layout>
-  <n-modal v-model:show="shareModelShowModel.value">
-    <n-card
-      style="width: 600px"
-      title="文件分享链接"
-      :bordered="false"
-      size="huge"
-      role="dialog"
-      aria-modal="true"
+    <n-modal
+      v-model:show="showModal"
+      :mask-closable="false"
+      preset="card"
+      title="文件分享"
+      content="你确认"
     >
-      {{ shareHref }}
-    </n-card>
-  </n-modal>
+      <n-card
+        style="width: 600px"
+        title="文件分享信息"
+        :bordered="false"
+        size="huge"
+        role="dialog"
+        aria-modal="true"
+      >
+        <!-- <template #header-extra>
+          噢！
+        </template> -->
+        <div>
+          code:
+          {{ shareHref.code }}
+        </div>
+        <div>
+          id:
+          {{ shareHref.id }}
+        </div>
+        
+        <!-- <template #footer>
+          尾部
+        </template> -->
+      </n-card>
+    </n-modal>
 </template>
 
 <script>
 import { h, defineComponent, computed, onMounted, ref } from "vue";
 import { NIcon, NDropdown, NButton } from "naive-ui";
 import { useRouter } from 'vue-router';
+import { useMessage } from "naive-ui";
 import axios from 'axios';
 import {
   PersonCircleOutline as UserIcon,
@@ -98,7 +119,7 @@ export default defineComponent({
     const fileInput = ref(null);
     const uploadPath = ref(''); // 上传路径
     const shareHref = ref('');
-    const shareModelShowModel = ref([]);
+    const shareModelShowModel = ref(false);
     const currentPath = ref([{ name: '根目录', id: sessionStorage.getItem("root") }]);
     
     const fetchFiles = async () => {
@@ -170,17 +191,26 @@ export default defineComponent({
     const shareFile = (row) => {
       // 实现分享文件的逻辑
       console.log("分享文件:", row.fileName);
-      const userToken = sessionStorage.getItem("userToken")
-      // axios.post('share/', {
-      //   "userId":userToken,
-      //   "fileId":row.fileId
-      // }).then(response => {
-        // console.log("分享成功", response);
+      const userToken = sessionStorage.getItem("userToken");
+      console.log("分享文件Id:", row.fileId);
+      console.log("分享文件UserId:", userToken);
+      console.log("分享文件:", row.fileName);
+      axios.post('share', {
+        "userId":parseInt(userToken),
+        "fileId":parseInt(row.fileId),
+        "time": 7*24,
+        "fileName": row.fileName
+      }).then(response => {
+        console.log("分享成功", response);
         console.log("分享成功");
         shareModelShowModel.value = true;
-      // }).catch(error => {
-      //   console.log("分享失败", error);
-      // });
+        shareHref.value = {
+          code : response.data.code,
+          id : response.data.shareId
+        }
+      }).catch(error => {
+        console.log("分享失败", error);
+      });
     };
 
     // 处理文件选择事件
@@ -422,11 +452,21 @@ export default defineComponent({
       handleFileChange,
       options,
       handleSelect,
-      shareModelShowModel,
       currentPath,
       enterFolder,
       navigateTo,
       goBack,
+      shareHref,
+      shareFile,
+      showModal: shareModelShowModel,
+      onNegativeClick() {
+        message.success("Cancel");
+        shareModelShowModel.value = false;
+      },
+      onPositiveClick() {
+        message.success("Submit");
+        shareModelShowModel.value = false;
+      }
     };
   }
 });

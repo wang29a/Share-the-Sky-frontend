@@ -80,6 +80,7 @@
 import { ref, defineComponent, h, onMounted, computed } from 'vue';
 import { NIcon, create, NDropdown, NButton } from "naive-ui";
 import axios from 'axios';
+import { useRouter } from 'vue-router';
 import {
   BookOutline as BookIcon,
   PersonOutline as PersonIcon,
@@ -115,8 +116,10 @@ const menuOptions = [
 
 export default defineComponent({
   setup() {
+    const router = useRouter();
     const userData = ref([]);
     const fileData = ref([]);
+    const ownerData = ref([]);
     const selectedMenu = ref('default');
 
     const handleMenuSelect = (key) => {
@@ -177,20 +180,104 @@ export default defineComponent({
     };
 
     const handleBack = () => {
-
+      router.push({name: 'Home'});
     }
 
     const viewFile = (row) => {
-
+      console.log("查看文件信息：", row.fileId);
+      console.log("文件名：", row.fileName);
+      console.log("文件信息：", row.fileType);
+      axios.post("/file/list/owners", {
+        "fileId" : parseInt(row.fileId),
+        "userId" : sessionStorage.getItem("userToken")
+      })
+      .then(response => {
+          console.log("展示")
+          console.log(response.data);
+          ownerData.value = response.data;
+      })
+      .catch(error => {
+        console.error("查看失败", error)
+      });
     };
+
     const deleteFile = (row) => {
+      console.log("删除文件信息：", row.fileId);
+      console.log("文件名：", row.fileName);
+      console.log("文件信息：", row.fileType);
+      axios.post("/file/deleteadmin", {
+        "fileId" : row.fileId,
+        "userId" : sessionStorage.getItem("userToken")
+      })
+      .then(response => {
+        if (response.data.status == 0){
+          console.log("删除成功")
+          fetchFiles();
+        }
+      })
+      .catch(error => {
+        console.error("删除文件失败", error)
+      });
 
     };
+
     const setAdmin = (row) => {
-
+      console.log("用户信息：", row.userId);
+      console.log("用户名：", row.userName);
+      console.log("用户信息：", row.userType);
+      axios.post("/drogon/user/modify/permissions", {
+        "userIdM" : row.userId,
+        "userId" : sessionStorage.getItem("userToken"),
+        "permission": "1",
+      })
+      .then(response => {
+        if (response.data.status == 0){
+          console.log("设置成功")
+          fetchUser();
+        }
+      })
+      .catch(error => {
+        console.error("设置失败", error)
+      });
     };
-    const deleteUser = (row) => {
 
+    const removeAdmin = (row) => {
+      console.log("用户信息：", row.userId);
+      console.log("用户名：", row.userName);
+      console.log("用户信息：", row.userType);
+      axios.post("/drogon/user/modify/permissions", {
+        "userIdM" : row.userId,
+        "userId" : sessionStorage.getItem("userToken"),
+        "permission": "2",
+      })
+      .then(response => {
+        if (response.data.status == 0){
+          console.log("取消管理员成功")
+          fetchUser();
+        }
+      })
+      .catch(error => {
+        console.error("取消管理员失败", error)
+      });
+    };
+
+    const deleteUser = (row) => {
+      console.log("删除用户信息：", row.userId);
+      console.log("用户名：", row.userName);
+      console.log("用户信息：", row.userType);
+      axios.post("/drogon/user/remove", {
+        "removeUserId" : row.userId,
+        "userId" : sessionStorage.getItem("userToken")
+      })
+      .then(response => {
+        if (response.data.status == 0){
+          console.log("删除成功")
+          fetchUser();
+        }
+      })
+      .catch(error => {
+        console.error("删除用户失败", error)
+      });
     };
 
     const userTypeToString = (type) => {
@@ -270,6 +357,8 @@ export default defineComponent({
           title: "操作",
           key: "actions",
           render(row) {
+            // 检查用户是否为管理员
+            const isAdmin = row.userType === 1; // 假设管理员的 userType 为 '管理员'
             return [
               h(
                 NButton,
@@ -277,9 +366,11 @@ export default defineComponent({
                   strong: true,
                   tertiary: true,
                   size: "small",
-                  onClick: () => setAdmin(row)
+                  // onClick: () => setAdmin(row)
+                  onClick: () => isAdmin ? removeAdmin(row) : setAdmin(row) // 如果是管理员则执行 removeAdmin，否则执行 setAdmin
                 },
-                { default: () => "设为管理员" }
+                // { default: () => "设为管理员" }
+                { default: () => isAdmin ? "取消管理员" : "设为管理员" } // 按钮文本根据是否为管理员而变化
               ),
               h(
                 NButton,
@@ -297,6 +388,16 @@ export default defineComponent({
         }
       ];
     };
+
+    const createOwnerColumns = () => {
+      return [
+        {
+          title: "用户名",
+          key: "userName"
+        },
+      ];
+    };
+
     return {
       selectedMenu,
       handleMenuSelect,
@@ -307,6 +408,7 @@ export default defineComponent({
       fileData,
       fileColumns: createFileColumns(),
       userColumns: createUserColumns(),
+      ownerColumns: createOwnerColumns(),
       handleBack,
     };
   }
