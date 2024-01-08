@@ -47,12 +47,15 @@
 
 <script>
 import axios from 'axios';
+
+import { useMessage } from "naive-ui";
 import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 export default {
   name: 'Login',
   setup() {
     const router = useRouter();
+    const message = useMessage();
     const loginForm = ref({
       username: '',
       password: ''
@@ -96,9 +99,20 @@ export default {
       })
       .then(response => {
         console.log(response.data);
+        
+        if(response.data.status == 0){
+            message.success("注册成功");
+        }else if(response.data.status == 1){
+            message.error(response.data.warning);
+        }else if(response.data.status == 2){
+            message.error(response.data.error);
+        }else{
+            message.error("注册过快，请10秒后注册");
+        }
         // 处理响应，例如保存 token、跳转到其他页面等
       })
       .catch(error => {
+        message.error(error);
         console.error('注册失败:', error);
         // 处理错误，例如显示错误消息
       });

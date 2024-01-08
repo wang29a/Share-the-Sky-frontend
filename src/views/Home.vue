@@ -33,8 +33,10 @@
         <div>
           <input type="file" @change="handleFileChange" ref="fileInput">
           <n-button @click="upLoadFile">上传文件</n-button>
+          <n-button @click="jumpToShare">获得分享</n-button>
         </div>
-
+        <div>
+        </div>
         <n-button @click="goBack">返回上一层</n-button>
         <n-breadcrumb>
           <n-breadcrumb-item
@@ -94,6 +96,7 @@ import { NIcon, NDropdown, NButton } from "naive-ui";
 import { useRouter } from 'vue-router';
 import { useMessage } from "naive-ui";
 import axios from 'axios';
+//import { defineComponent } from 'vue'
 import {
   PersonCircleOutline as UserIcon,
   Pencil as EditIcon,
@@ -141,6 +144,7 @@ export default defineComponent({
       const token = sessionStorage.getItem('userToken');
       console.log("check Login Status, token:", sessionStorage.getItem('userToken'))
       if (token == null) {
+        
         router.push({ name: 'Login' });
       }
     }
@@ -183,6 +187,11 @@ export default defineComponent({
         "userId":userToken,
         "fileId":row.fileId
       }).then(response => {
+        if(response.data.status == 0){
+            message.success("删除成功");
+        }else if(response.data.status == 2){
+            message.error(response.data.error); 
+        }
         console.log("删除成功", response);
         fetchFiles()
       }).catch(error => {
@@ -214,7 +223,11 @@ export default defineComponent({
         console.log("分享失败", error);
       });
     };
-
+    const jumpToShare = () => {
+        router.push('/sf');
+        //router.push({name: 'Share'});
+      
+    };
     // 处理文件选择事件
     const handleFileChange = (event) => {
       selectedFile.value = event.target.files[0];
@@ -235,6 +248,7 @@ export default defineComponent({
             'Content-Type': 'multipart/form-data'
           },
         }).then(response => {
+          
           console.log('上传成功', response);
           fetchFiles();
         }).catch(error => {
@@ -254,6 +268,13 @@ export default defineComponent({
             'Content-Type': 'multipart/form-data'
           },
         }).then(response => {
+          if(response.data.status == 0){
+              message.success("上传成功");
+          }else if(response.data.status == 1){
+              message.error(response.data.warning); 
+          }else{
+              message.error(response.data.error); 
+          }
           console.log('上传成功', response);
           fetchFiles();
         }).catch(error => {
@@ -273,14 +294,19 @@ export default defineComponent({
       console.log("path:", );
       console.log("folderId:", folder.folderId);
       // 更新文件列表以显示文件夹内容
+
       try {
           const userToken = sessionStorage.getItem('userToken');
           const response = await axios.post('/file/list', {
             // userId: userToken,
             folderId: parseInt(folder.folderId) // 假设 folder 对象有 folderId 属性
           });
-          data.value = response.data; // 更新文件列表
-          currentPath.value.push({ name: folder.folderName, id: folder.folderId });
+          if(response.data.status == 1){
+            message.warning(response.data.warning);
+          }else{
+              data.value = response.data; // 更新文件列表
+              currentPath.value.push({ name: folder.folderName, id: folder.folderId });
+          }
         } catch (error) {
           console.error('获取文件列表失败:', error);
         }
@@ -478,6 +504,7 @@ export default defineComponent({
       currentPath,
       enterFolder,
       navigateTo,
+      jumpToShare,
       goBack,
       shareHref,
       shareFile,
