@@ -74,13 +74,13 @@ export default defineComponent({
         console.log("fileSize:", parseInt(row.fileSize));
         const response = 
         axios.post('/share/save', {
-          path:"/2/", 
+          path:"/", 
           fileExtension: row.fileExtension,
           fileId: parseInt(row.fileId),
           fileName: row.fileName,
           fileSize: parseInt(row.fileSize),
-          // userId: parseInt(sessionStorage.getItem("userToken")),
-          userId: 3,
+          userId: parseInt(sessionStorage.getItem("userToken")),
+          // userId: 3,
         });
         console.log("response:", response);
           message.success("转存文件成功");
