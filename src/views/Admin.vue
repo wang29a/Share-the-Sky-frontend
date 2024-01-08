@@ -74,6 +74,23 @@
       </div>
     </n-layout-content>
   </n-layout>
+  <n-modal v-model:show="showModal">
+    <n-card
+      style="width: 600px"
+      title="拥有此文件的用户"
+      :bordered="false"
+      size="huge"
+      role="dialog"
+      aria-modal="true"
+    >
+      <n-data-table
+        :columns="ownerColumns"
+        :data="ownerData"
+        :pagination="pagination"
+        :bordered="false"
+      />
+    </n-card>
+  </n-modal>
 </template>
 
 <script>
@@ -121,6 +138,8 @@ export default defineComponent({
     const fileData = ref([]);
     const ownerData = ref([]);
     const selectedMenu = ref('default');
+    const ShowModel = ref(false);
+
 
     const handleMenuSelect = (key) => {
       console.log("menu key:", key)
@@ -195,6 +214,7 @@ export default defineComponent({
           console.log("展示")
           console.log(response.data);
           ownerData.value = response.data;
+          ShowModel.value = true;
       })
       .catch(error => {
         console.error("查看失败", error)
@@ -406,10 +426,12 @@ export default defineComponent({
       menuOptions,
       userData,
       fileData,
+      ownerData,
       fileColumns: createFileColumns(),
       userColumns: createUserColumns(),
       ownerColumns: createOwnerColumns(),
       handleBack,
+      showModal: ShowModel,
     };
   }
 });
