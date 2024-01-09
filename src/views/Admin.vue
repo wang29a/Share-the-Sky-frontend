@@ -268,10 +268,18 @@ export default defineComponent({
       console.log("文件名：", row.fileName);
       console.log("文件信息：", row.fileType);
       axios.post("/file/list/owners", {
-        "fileId" : parseInt(row.fileId),
-        "userId" : sessionStorage.getItem("userToken")
+        "fileId" : parseInt(row.fileId)//,
+       // "userId" : sessionStorage.getItem("userToken")
       })
       .then(response => {
+          if(response.data.status == 1){
+              message.warning(response.data.warning);
+              return;
+          }else if(response.data.status == 2){
+              message.error(response.data.error);
+              return;
+          }
+          
           console.log("展示")
           console.log(response.data);
           ownerData.value = response.data;
@@ -429,9 +437,11 @@ export default defineComponent({
           message.success("添加用户成功");
           console.log("添加成功")
           fetchUser();
-        }else{
-          message.error("添加用户失败，用户名/邮箱重复");
-        }
+        }else if(response.data.status == 1){
+          message.error(response.data.warning);
+        }else if(response.data.status == 2){
+          message.error(response.data.error);
+        } 
       })
       .catch(error => {
         message.error("添加用户失败，用户名/邮箱重复");
