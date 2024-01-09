@@ -88,6 +88,70 @@
         </template> -->
       </n-card>
     </n-modal>
+  <n-modal v-model:show="userShowModal">
+    <n-card
+      style="width: 600px"
+      title="修改用户信息"
+      :bordered="false"
+      size="huge"
+      role="dialog"
+      aria-modal="true"
+    >
+    <n-form
+      ref="userFormRef"
+      disabled="true"
+      inline
+      :label-width="80"
+      :model="userFormValue"
+      :size="size"
+    >
+      <n-form-item label="用户" path="user.name">
+        <n-input v-model:value="userFormValue.userName" placeholder="输入userName" />
+      </n-form-item>
+      <n-form-item label="密码" path="user.password">
+        <n-input v-model:value="userFormValue.passWord" placeholder="输入password" />
+      </n-form-item>
+      <n-form-item label="邮箱" path="user.email">
+        <n-input v-model:value="userFormValue.email" placeholder="输入email" />
+      </n-form-item>
+      <n-form-item>
+      </n-form-item>
+    </n-form>
+    </n-card>
+  </n-modal>
+  <n-modal v-model:show="modifyUserShowModal">
+    <n-card
+      style="width: 600px"
+      title="修改用户信息"
+      :bordered="false"
+      size="huge"
+      role="dialog"
+      aria-modal="true"
+    >
+    <n-form
+      ref="userFormRef"
+      inline
+      :label-width="80"
+      :model="userFormValue"
+      :size="size"
+    >
+      <n-form-item label="用户" path="user.name">
+        <n-input v-model:value="userFormValue.userName" placeholder="输入userName" />
+      </n-form-item>
+      <n-form-item label="密码" path="user.password">
+        <n-input v-model:value="userFormValue.passWord" placeholder="输入password" />
+      </n-form-item>
+      <n-form-item label="邮箱" path="user.email">
+        <n-input v-model:value="userFormValue.email" placeholder="输入email" />
+      </n-form-item>
+      <n-form-item>
+        <n-button attr-type="button" @click="modifyUser">
+          修改
+        </n-button>
+      </n-form-item>
+    </n-form>
+    </n-card>
+  </n-modal>
 </template>
 
 <script>
@@ -125,6 +189,15 @@ export default defineComponent({
     const shareModelShowModel = ref(false);
     const currentPath = ref([{ name: '根目录', id: sessionStorage.getItem("root") }]);
     const message = useMessage();
+    const modifyUserShowModel = ref(false);
+    const UserShowModel = ref(false);
+    const userFormRef = ref(null);
+    const userFormValue = ref({
+      userId: "",
+      userName:"",
+      passWord:"",
+      email:"",
+    });
     
     const fetchFiles = async () => {
       try {
@@ -433,17 +506,77 @@ export default defineComponent({
       ];
     };
 
+    const check = () => {
+      axios.post("/drogon/user/select",{
+        userId: parseInt(sessionStorage.getItem("userToken"))
+      }).then(response => {
+        console.log(response.data.data);
+        userFormValue._value.userId = response.data.data.userId;
+        userFormValue._value.userName = response.data.data.userName;
+        userFormValue._value.passWord = response.data.data.passWord;
+        userFormValue._value.email = response.data.data.email;
+        UserShowModel.value = true;
+      })
+      .catch(error => {
+
+      });
+    }
+
+    const showModifyUser = () => {
+      axios.post("/drogon/user/select",{
+        userId: parseInt(sessionStorage.getItem("userToken"))
+      }).then(response => {
+        console.log("修改用户信息：", sessionStorage.getItem("userToken"));
+        console.log("用户名：", response.data.data.userName);
+        userFormValue._value.userId = response.data.data.userId;
+        userFormValue._value.userName = response.data.data.userName;
+        userFormValue._value.passWord = response.data.data.passWord;
+        userFormValue._value.email = response.data.data.email;
+        modifyUserShowModel.value = true;
+      })
+      .catch(error => {
+
+      });
+    };
+    
+    const modifyUser = () => {
+      console.log(userFormValue._value.userName);
+      console.log(userFormValue._value.passWord);
+      console.log(userFormValue._value.email);
+      axios.post("/drogon/user/modify", {
+        "userIdM" : userFormValue._value.userId,
+        "userId" : sessionStorage.getItem("userToken"),
+        "userName" : userFormValue._value.userName,
+        "passWord" : userFormValue._value.passWord,
+        "email" : userFormValue._value.email,
+      })
+      .then(response => {
+        if (response.data.status == 0){
+          message.success("修改用户信息成功");
+          console.log("修改成功")
+        }else{
+          message.error("修改用户信息失败，用户名/邮箱重复");
+        }
+      })
+      .catch(error => {
+        message.error("修改用户信息失败，用户名/邮箱重复");
+        console.error("修改用户失败", error)
+      });
+    }
+
     const handleSelect = (key) => {
       console.log("key:", key)
       switch (key) {
         case 'profile':
           // 执行查看用户资料的逻辑
           console.log('查看用户资料');
+          check();
+
           break;
         case 'editProfile':
           // 执行编辑用户资料的逻辑
           console.log('编辑用户资料');
-          router.push('/edit-profile');
+          showModifyUser();
           break;
         case 'admin':
           // 后台管理
@@ -509,6 +642,12 @@ export default defineComponent({
       shareHref,
       shareFile,
       showModal: shareModelShowModel,
+      modifyUserShowModal:modifyUserShowModel,
+      userShowModal:UserShowModel,
+      userFormRef,
+      userFormValue,
+      modifyUser,
+      check,
       onNegativeClick() {
         message.success("Cancel");
         shareModelShowModel.value = false;
