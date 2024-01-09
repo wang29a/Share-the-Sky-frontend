@@ -45,6 +45,31 @@
           :bordered="false"
         />
       </div>
+      <div v-if="selectedMenu === 'import'">
+        <!-- 用户添加相关内容 -->
+        <n-form
+          ref="addUserFormRef"
+          inline
+          :label-width="80"
+          :model="addUserFormValue"
+          :size="size"
+        >
+          <n-form-item label="用户" path="user.name">
+            <n-input v-model:value="addUserFormValue.userName" placeholder="输入userName" />
+          </n-form-item>
+          <n-form-item label="密码" path="user.password">
+            <n-input v-model:value="addUserFormValue.passWord" placeholder="输入password" />
+          </n-form-item>
+          <n-form-item label="邮箱" path="user.email">
+            <n-input v-model:value="addUserFormValue.email" placeholder="输入email" />
+          </n-form-item>
+          <n-form-item>
+            <n-button attr-type="button" @click="addUser">
+              添加用户
+            </n-button>
+          </n-form-item>
+        </n-form>
+      </div>
       <div v-if="selectedMenu === 'file-management'">
         <!-- 文件管理相关内容 -->
         <n-data-table
@@ -164,8 +189,13 @@ export default defineComponent({
       userName:"",
       passWord:"",
       email:"",
-    //   capability:"",
-    //   remaining:"",
+    });
+    const addUserFormRef = ref(null);
+    const addUserFormValue = ref({
+      userId: "",
+      userName:"",
+      passWord:"",
+      email:"",
     });
 
 
@@ -385,6 +415,28 @@ export default defineComponent({
     }
 
     const addUser = () => {
+      console.log(addUserFormValue._value.userName);
+      console.log(addUserFormValue._value.passWord);
+      console.log(addUserFormValue._value.email);
+      axios.post("/drogon/user/add", {
+        "userId" : sessionStorage.getItem("userToken"),
+        "userName" : addUserFormValue._value.userName,
+        "passWord" : addUserFormValue._value.passWord,
+        "email" : addUserFormValue._value.email,
+      })
+      .then(response => {
+        if (response.data.status == 0){
+          message.success("添加用户成功");
+          console.log("添加成功")
+          fetchUser();
+        }else{
+          message.error("添加用户失败，用户名/邮箱重复");
+        }
+      })
+      .catch(error => {
+        message.error("添加用户失败，用户名/邮箱重复");
+        console.error("添加用户失败", error)
+      });
 
     }
 
@@ -537,6 +589,9 @@ export default defineComponent({
       userFormValue,
       size: ref("medium"),
       modifyUser,
+      addUserFormRef,
+      addUserFormValue,
+      addUser,
     };
   }
 });
