@@ -18,27 +18,9 @@
     </n-layout-sider>
     <n-layout-content>
       <div v-if="selectedMenu === 'default'">
-          <n-carousel>
-            <img
-              class="carousel-img"
-              src="https://naive-ui.oss-cn-beijing.aliyuncs.com/carousel-img/carousel1.jpeg"
-            >
-            <img
-              class="carousel-img"
-              src="https://naive-ui.oss-cn-beijing.aliyuncs.com/carousel-img/carousel2.jpeg"
-            >
-            <img
-              class="carousel-img"
-              src="https://naive-ui.oss-cn-beijing.aliyuncs.com/carousel-img/carousel3.jpeg"
-            >
-            <img
-              class="carousel-img"
-              src="https://naive-ui.oss-cn-beijing.aliyuncs.com/carousel-img/carousel4.jpeg"
-            >
-          </n-carousel>
         <n-space vertical>
           <n-card title="小卡片" size="small">
-            卡片内容
+            在线文件管理系统,基于drogon的C++,vue前端
           </n-card>
           <n-card title="中卡片" size="medium">
             卡片内容
@@ -89,6 +71,39 @@
         :pagination="pagination"
         :bordered="false"
       />
+    </n-card>
+  </n-modal>
+  <n-modal v-model:show="modifyUserShowModal">
+    <n-card
+      style="width: 600px"
+      title="修改用户信息"
+      :bordered="false"
+      size="huge"
+      role="dialog"
+      aria-modal="true"
+    >
+    <n-form
+      ref="userFormRef"
+      inline
+      :label-width="80"
+      :model="userFormValue"
+      :size="size"
+    >
+      <n-form-item label="用户" path="user.name">
+        <n-input v-model:value="userFormValue.userName" placeholder="输入userName" />
+      </n-form-item>
+      <n-form-item label="密码" path="user.password">
+        <n-input v-model:value="userFormValue.passWord" placeholder="输入password" />
+      </n-form-item>
+      <n-form-item label="邮箱" path="user.email">
+        <n-input v-model:value="userFormValue.email" placeholder="输入email" />
+      </n-form-item>
+      <n-form-item>
+        <n-button attr-type="button" @click="modifyUser">
+          修改
+        </n-button>
+      </n-form-item>
+    </n-form>
     </n-card>
   </n-modal>
 </template>
@@ -142,6 +157,16 @@ export default defineComponent({
     const message = useMessage();
     const selectedMenu = ref('default');
     const ShowModel = ref(false);
+    const modifyUserShowModel = ref(false);
+    const userFormRef = ref(null);
+    const userFormValue = ref({
+      userId: "",
+      userName:"",
+      passWord:"",
+      email:"",
+    //   capability:"",
+    //   remaining:"",
+    });
 
 
     const handleMenuSelect = (key) => {
@@ -259,7 +284,7 @@ export default defineComponent({
       axios.post("/drogon/user/modify/permissions", {
         "userIdM" : row.userId,
         "userId" : sessionStorage.getItem("userToken"),
-        "permissions": "1",
+        "permission": "1",
       })
       .then(response => {
         if (response.data.status == 0){
@@ -281,7 +306,7 @@ export default defineComponent({
       axios.post("/drogon/user/modify/permissions", {
         "userIdM" : row.userId,
         "userId" : sessionStorage.getItem("userToken"),
-        "permissions": "2",
+        "permission": "2",
       })
       .then(response => {
         if (response.data.status == 0){
@@ -317,10 +342,51 @@ export default defineComponent({
         }
       })
       .catch(error => {
-        message.errir("删除用户失败");
+        message.error("删除用户失败");
         console.error("删除用户失败", error)
       });
     };
+
+    const showModifyUser = (row) => {
+      console.log("修改用户信息：", row.userId);
+      console.log("用户名：", row.userName);
+      console.log("用户信息：", row.userType);
+      userFormValue._value.userId = row.userId;
+      userFormValue._value.userName = row.userName;
+      userFormValue._value.passWord = row.passWord;
+      userFormValue._value.email = row.email;
+      modifyUserShowModel.value = true;
+    };
+    
+    const modifyUser = () => {
+      console.log(userFormValue._value.userName);
+      console.log(userFormValue._value.passWord);
+      console.log(userFormValue._value.email);
+      axios.post("/drogon/user/modify", {
+        "userIdM" : userFormValue._value.userId,
+        "userId" : sessionStorage.getItem("userToken"),
+        "userName" : userFormValue._value.userName,
+        "passWord" : userFormValue._value.passWord,
+        "email" : userFormValue._value.email,
+      })
+      .then(response => {
+        if (response.data.status == 0){
+          message.success("修改用户信息成功");
+          console.log("修改成功")
+          fetchUser();
+        }else{
+          message.error("修改用户信息失败，用户名/邮箱重复");
+        }
+      })
+      .catch(error => {
+        message.error("修改用户信息失败，用户名/邮箱重复");
+        console.error("修改用户失败", error)
+      });
+    }
+
+    const addUser = () => {
+
+    }
 
     const userTypeToString = (type) => {
       const typeMap = {
@@ -421,6 +487,17 @@ export default defineComponent({
                   tertiary: true,
                   type: "error",
                   size: "small",
+                  onClick: () => showModifyUser(row)
+                },
+                { default: () => "修改" }
+              ),
+              h(
+                NButton,
+                {
+                  strong: true,
+                  tertiary: true,
+                  type: "error",
+                  size: "small",
                   onClick: () => deleteUser(row)
                 },
                 { default: () => "删除" }
@@ -455,6 +532,11 @@ export default defineComponent({
       ownerColumns: createOwnerColumns(),
       handleBack,
       showModal: ShowModel,
+      modifyUserShowModal: modifyUserShowModel,
+      userFormRef,
+      userFormValue,
+      size: ref("medium"),
+      modifyUser,
     };
   }
 });
