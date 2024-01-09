@@ -36,7 +36,14 @@
           <n-button @click="jumpToShare">获得分享</n-button>
         </div>
         <div>
-        </div>
+           <n-progress type="line" :percentage="percentage" processing/>
+         </div>
+         <n-row>
+              <n-statistic label="剩余时间(秒)":value="duration">
+              </n-statistic>
+              <n-statistic label="速度(KiB/s)":value="speed">
+              </n-statistic>
+         </n-row>
         <n-button @click="goBack">返回上一层</n-button>
         <n-breadcrumb>
           <n-breadcrumb-item
@@ -207,6 +214,9 @@ const renderIcon = (icon) => {
 export default defineComponent({
   setup() {
     const router = useRouter();
+    const percentageRef = ref(0);
+    const durationRef = ref(0);
+    const speedRef = ref(0);
     const isAdmin = computed(() => sessionStorage.getItem("isAdmin") === "true");
     const data = ref([]);
     const selectedFile = ref(null);
@@ -262,12 +272,39 @@ export default defineComponent({
       // 实现下载文件的逻辑
       const userToken = sessionStorage.getItem('userToken');
       console.log("下载文件:", row.fileName, row.fileId, userToken);
+
+      const startTime = new Date().getTime(); // 记录下载开始的时间
+      let lastUpdateTime = startTime; // 上次更新时间
+      const updateInterval = 1000; // 更新间隔（毫秒），这里设置为1秒
+      console.log("下载文件:", row.fileName, row.fileId, userToken);
       axios.get('/file/download', {
         params: {
           userid: userToken,
           fileid: row.fileId
         },
-        responseType: 'blob' // 重要: 设置响应类型为 blob
+        responseType: 'blob', // 重要: 设置响应类型为 blob
+
+        onDownloadProgress: progressEvent => {
+           const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+           console.log(`下载进度: ${percentCompleted}%`);
+           percentageRef.value = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+           const currentTime = new Date().getTime();
+           if (currentTime - lastUpdateTime > updateInterval) {
+               lastUpdateTime = currentTime; // 更新上次更新时间
+               const elapsed = (currentTime - startTime) / 1000; // 已经过去的时间（秒）
+               const speed = progressEvent.loaded / elapsed; // 每秒下载字节数
+               const remaining = progressEvent.total - progressEvent.loaded; // 剩余字节数
+               const remainingTime = (remaining / speed).toFixed(2); // 剩余时间（秒）
+           if(remainingTime < 1){
+                   remainingTime = 0;
+                   speed = 0;
+           }
+               durationRef.value = remainingTime;
+               speedRef.value = (speed / 1024).toFixed(1);
+               console.log(`剩余时间: ${remainingTime}秒`);
+               console.log(`hh: ${speed}`);
+           }
+        }
       }).then(response => {
         // console.log("下载中",response);
         const url = window.URL.createObjectURL(new Blob([response.data]));
@@ -352,6 +389,29 @@ export default defineComponent({
           headers: {
             'Content-Type': 'multipart/form-data'
           },
+
+        onUploadProgress: progressEvent => {
+           const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+           percentageRef.value = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+           console.log(`上传进度: ${percentCompleted}%`); 
+           const currentTime = new Date().getTime();
+           if (currentTime - lastUpdateTime > updateInterval) {
+               lastUpdateTime = currentTime; // 更新上次更新时间
+               const elapsed = (currentTime - startTime) / 1000; // 已经过去的时间（秒）
+               const speed = progressEvent.loaded / elapsed; // 每秒下载字节数
+               const remaining = progressEvent.total - progressEvent.loaded; // 剩余字节数
+               const remainingTime = (remaining / speed).toFixed(2); // 剩余时间（秒）
+               if(remainingTime < 1){
+                       remainingTime = 0;
+                       speed = 0;
+               }
+               durationRef.value = remainingTime;
+               speedRef.value = (speed / 1024).toFixed(1);
+               console.log(`剩余时间: ${remainingTime}秒`);
+               console.log(`剩余时间hh: ${durationRef.value}秒`);
+           }
+
+        }    
         }).then(response => {
           
           console.log('上传成功', response);
@@ -372,6 +432,28 @@ export default defineComponent({
           headers: {
             'Content-Type': 'multipart/form-data'
           },
+        onUploadProgress: progressEvent => {
+           const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+           percentageRef.value = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+           console.log(`上传进度: ${percentCompleted}%`); 
+           const currentTime = new Date().getTime();
+           if (currentTime - lastUpdateTime > updateInterval) {
+               lastUpdateTime = currentTime; // 更新上次更新时间
+               const elapsed = (currentTime - startTime) / 1000; // 已经过去的时间（秒）
+               const speed = progressEvent.loaded / elapsed; // 每秒下载字节数
+               const remaining = progressEvent.total - progressEvent.loaded; // 剩余字节数
+               const remainingTime = (remaining / speed).toFixed(2); // 剩余时间（秒）
+               if(remainingTime < 1){
+                       remainingTime = 0;
+                       speed = 0;
+               }
+               durationRef.value = remainingTime;
+               speedRef.value = (speed / 1024).toFixed(1);
+               console.log(`剩余时间: ${remainingTime}秒`);
+               console.log(`剩余时间hh: ${durationRef.value}秒`);
+           }
+
+        }
         }).then(response => {
           if(response.data.status == 0){
               message.success("上传成功");
@@ -733,6 +815,9 @@ export default defineComponent({
       pagination: false,
       fileInput,
       selectedFile,
+      percentage: percentageRef,                                
+      duration: durationRef,
+      speed: speedRef,
       uploadPath,
       upLoadFile,
       handleFileChange,
