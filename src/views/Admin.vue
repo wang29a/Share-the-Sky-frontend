@@ -239,7 +239,9 @@ export default defineComponent({
       console.log("fileId:", row.fileId);
       axios.get('/file/download/admin', {
         params: {
-          fileid: row.fileId
+          fileid: row.fileId,
+          userId : sessionStorage.getItem("userToken")
+
         },
         responseType: 'blob' // 重要: 设置响应类型为 blob
       }).then(response => {
@@ -268,8 +270,8 @@ export default defineComponent({
       console.log("文件名：", row.fileName);
       console.log("文件信息：", row.fileType);
       axios.post("/file/list/owners", {
-        "fileId" : parseInt(row.fileId)//,
-       // "userId" : sessionStorage.getItem("userToken")
+        "fileId" : parseInt(row.fileId),
+        "userId" : sessionStorage.getItem("userToken")
       })
       .then(response => {
           if(response.data.status == 1){
@@ -296,8 +298,8 @@ export default defineComponent({
       console.log("文件名：", row.fileName);
       console.log("文件信息：", row.fileType);
       axios.post("/file/deleteadmin", {
-        "fileId" : row.fileId
-       // "userId" : sessionStorage.getItem("userToken")
+        "fileId" : row.fileId,
+        "userId" : sessionStorage.getItem("userToken")
       })
       .then(response => {
         if (response.data.status == 0){
