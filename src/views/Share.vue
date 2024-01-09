@@ -18,6 +18,9 @@
         <n-button attr-type="button" @click="handleValidateClick">
           获取
         </n-button>
+        <n-button attr-type="button" @click="goHome">
+          主页 
+        </n-button>
       </n-form-item>
     </n-form>
     <n-data-table v-data-table:show="false"
@@ -36,6 +39,8 @@ import { defineComponent, ref, h } from "vue";
 import { useMessage } from "naive-ui";
 import { NIcon, NDropdown, NButton } from "naive-ui";
 import axios from "axios"; // 引入axios
+
+import { useRouter } from 'vue-router';
 import {
   PersonCircleOutline as UserIcon,
   Pencil as EditIcon,
@@ -56,6 +61,7 @@ export default defineComponent({
   setup() {
     const formRef = ref(null);
     const message = useMessage();
+    const router = useRouter();
     const formValue = ref({
       shareId: "",
       code: ""
@@ -64,7 +70,7 @@ export default defineComponent({
     
     const saveFile = (row) => {
       //转存文件的逻辑
-      try {
+     // try {
         console.log("转存文件");
         console.log("check Login Status, token:", sessionStorage.getItem('userToken'));
         console.log("path:");
@@ -72,24 +78,41 @@ export default defineComponent({
         console.log("fileId:", parseInt(row.fileId));
         console.log("fileName:", row.fileName);
         console.log("fileSize:", parseInt(row.fileSize));
+        if(row.fileName == null){
+            message.error("invalid file");
+           // router.push("/sf");
+            return;
+        }
         const response = 
         axios.post('/share/save', {
-          path:"/", 
+          path:"/转存/", 
           fileExtension: row.fileExtension,
           fileId: parseInt(row.fileId),
           fileName: row.fileName,
           fileSize: parseInt(row.fileSize),
           userId: parseInt(sessionStorage.getItem("userToken")),
-          // userId: 3,
-        });
+          //userId: 3,
+        }).then(response => {
+          if(response.data.status == 0){
+              message.success("转存成功");
+          }else if(response.data.status == 2){
+              message.error(response.data.error); 
+          }else if(response.data.status == 1){
+              message.error(response.data.warning);
+          }
+        }).catch(error => {
         console.log("response:", response);
-          message.success("转存文件成功");
-      } catch (error) {
         console.error('转存文件失败:', error);
         message.error("转存文件失败");
-      }
+      });
     }
-
+    
+    const goHome = () => {
+        router.push({name: 'Home'});
+        //router.push({name: 'Share'});
+      
+    };
+    
     const createShareColumns = () => {
       return [
         {
@@ -133,6 +156,7 @@ export default defineComponent({
     };
     return {
       shareData,
+      goHome,
       shareColumns: createShareColumns(),
       formRef,
       size: ref("medium"),
@@ -160,16 +184,21 @@ export default defineComponent({
               // 使用axios发送请求到后端
               const response = await axios.post('/share/acquire', {
                 shareId: parseInt(formValue._value.shareId),
-                code: formValue._value.code
+                code: formValue._value.code.trim()
               });
-              shareData.value = [response.data];
-
-              if (response.data) {
+              if (response.data.status == 0) {
                 message.success("获取成功");
                 // 在这里处理更多的逻辑
-              } else {
-                message.error(response.data.message || "获取失败");
+              } else if(response.data.status == 1){
+                message.warning(response.data.warning || "获取失败");
+                return;
+              } else if(response.data.status == 2){
+                message.error(response.data.error || "获取失败");
+                return;
               }
+              shareData.value = [response.data];
+
+              
             } catch (error) {
               console.log(error)
               message.error("网络错误或服务器问题");

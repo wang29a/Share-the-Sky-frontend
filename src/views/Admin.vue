@@ -98,6 +98,8 @@ import { ref, defineComponent, h, onMounted, computed } from 'vue';
 import { NIcon, create, NDropdown, NButton } from "naive-ui";
 import axios from 'axios';
 import { useRouter } from 'vue-router';
+
+import { useMessage } from "naive-ui";
 import {
   BookOutline as BookIcon,
   PersonOutline as PersonIcon,
@@ -137,6 +139,7 @@ export default defineComponent({
     const userData = ref([]);
     const fileData = ref([]);
     const ownerData = ref([]);
+    const message = useMessage();
     const selectedMenu = ref('default');
     const ShowModel = ref(false);
 
@@ -156,6 +159,7 @@ export default defineComponent({
         axios.post('/file/alllist', {userId:userToken});
         fileData.value = response.data; // 使用后端返回的文件列表
       } catch (error) {
+        message.error("获取文件按列表失败");
         console.error('获取文件列表失败:', error);
       }
     };
@@ -170,7 +174,8 @@ export default defineComponent({
         axios.post('/drogon/user/listall', {path:"/", userId:userToken});
         userData.value = response.data; // 使用后端返回的用户列表
       } catch (error) {
-        console.error('获取文件列表失败:', error);
+        console.error('获取用户列表失败:', error);
+        message.error("获取用户列表失败");
       }
     };
     onMounted(fetchFiles);
@@ -194,6 +199,7 @@ export default defineComponent({
         document.body.removeChild(link); // 下载完成后移除元素
         window.URL.revokeObjectURL(url); // 释放URL对象
       }).catch(error => {
+        message.error("出错了");
         console.log("出错了", error);
       });
     };
@@ -217,6 +223,7 @@ export default defineComponent({
           ShowModel.value = true;
       })
       .catch(error => {
+        message.error("查看失败");
         console.error("查看失败", error)
       });
     };
@@ -226,16 +233,20 @@ export default defineComponent({
       console.log("文件名：", row.fileName);
       console.log("文件信息：", row.fileType);
       axios.post("/file/deleteadmin", {
-        "fileId" : row.fileId,
-        "userId" : sessionStorage.getItem("userToken")
+        "fileId" : row.fileId
+       // "userId" : sessionStorage.getItem("userToken")
       })
       .then(response => {
         if (response.data.status == 0){
+          message.success("删除成功");
           console.log("删除成功")
           fetchFiles();
+        }else{
+          message.error("删除失败");
         }
       })
       .catch(error => {
+         message.error("删除失败");
         console.error("删除文件失败", error)
       });
 
@@ -248,15 +259,17 @@ export default defineComponent({
       axios.post("/drogon/user/modify/permissions", {
         "userIdM" : row.userId,
         "userId" : sessionStorage.getItem("userToken"),
-        "permission": "1",
+        "permissions": "1",
       })
       .then(response => {
         if (response.data.status == 0){
+          message.success("设置成功");
           console.log("设置成功")
           fetchUser();
         }
       })
       .catch(error => {
+        message.error("设置失败");
         console.error("设置失败", error)
       });
     };
@@ -268,15 +281,20 @@ export default defineComponent({
       axios.post("/drogon/user/modify/permissions", {
         "userIdM" : row.userId,
         "userId" : sessionStorage.getItem("userToken"),
-        "permission": "2",
+        "permissions": "2",
       })
       .then(response => {
         if (response.data.status == 0){
+          message.success("取消管理员成功");
           console.log("取消管理员成功")
           fetchUser();
+        }else{
+           message.error("取消管理员失败");
         }
+
       })
       .catch(error => {
+        message.error("取消管理员失败");
         console.error("取消管理员失败", error)
       });
     };
@@ -291,11 +309,15 @@ export default defineComponent({
       })
       .then(response => {
         if (response.data.status == 0){
+          message.success("删除用户成功");
           console.log("删除成功")
           fetchUser();
+        }else{
+          message.error("删除用户失败");
         }
       })
       .catch(error => {
+        message.errir("删除用户失败");
         console.error("删除用户失败", error)
       });
     };
@@ -425,6 +447,7 @@ export default defineComponent({
       collapsed: ref(true),
       menuOptions,
       userData,
+      setAdmin,
       fileData,
       ownerData,
       fileColumns: createFileColumns(),
