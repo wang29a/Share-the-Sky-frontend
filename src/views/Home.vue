@@ -152,6 +152,33 @@
     </n-form>
     </n-card>
   </n-modal>
+  <n-modal v-model:show="renameFolderShowModal">
+    <n-card
+      style="width: 600px"
+      title="修改文件夹名"
+      :bordered="false"
+      size="huge"
+      role="dialog"
+      aria-modal="true"
+    >
+    <n-form
+      ref="folderFormRef"
+      inline
+      :label-width="80"
+      :model="folderFormValue"
+      :size="size"
+    >
+      <n-form-item label="文件夹名" path="folder.name">
+        <n-input v-model:value="folderFormValue.folderName" placeholder="输入folderName" />
+      </n-form-item>
+      <n-form-item>
+        <n-button attr-type="button" @click="renameFolder">
+          修改
+        </n-button>
+      </n-form-item>
+    </n-form>
+    </n-card>
+  </n-modal>
 </template>
 
 <script>
@@ -197,6 +224,11 @@ export default defineComponent({
       userName:"",
       passWord:"",
       email:"",
+    });
+    const renameFolderShowModel = ref(false);
+    const folderFormRef = ref(null);
+    const folderFormValue = ref({
+      folderName:""
     });
     
     const fetchFiles = async () => {
@@ -385,6 +417,55 @@ export default defineComponent({
         }
     };
 
+    const showFolderRename = (row) => {
+        console.log("id:", row.folderId)
+        console.log("name:", row.folderName)
+        folderFormValue._value.folderName = row.folderName;
+        folderFormValue._value.folderId = row.folderId;
+        renameFolderShowModel.value = true;
+    }
+
+    const renameFolder = async () => {
+      console.log("进入文件夹:", );
+      console.log("userId:", sessionStorage.getItem('userToken'));
+      console.log("folderId:", folderFormValue._value.folderId);
+      console.log("folder新名:", folderFormValue._value.folderName);
+      try {
+          const userToken = sessionStorage.getItem('userToken');
+          const response = await axios.post('/folder/rename', {
+            // userId: userToken,
+            folderName: folderFormValue._value.folderName,
+            folderId: parseInt(folderFormValue._value.folderId) // 假设 folder 对象有 folderId 属性
+          });
+          if(response.data.status == 1){
+            message.warning(response.data.warning);
+          }else{
+            fetchFiles();
+          }
+        } catch (error) {
+          console.error('获取文件列表失败:', error);
+        }
+    };
+    const deleteFolder = async (row) => {
+      console.log("进入文件夹:", row.folderName);
+      console.log("userId:", sessionStorage.getItem('userToken'));
+      console.log("folderId:", row.folderId);
+      try {
+          const userToken = sessionStorage.getItem('userToken');
+          const response = await axios.post('/folder/delete', {
+            // userId: userToken,
+            folderId: parseInt(row.folderId) // 假设 folder 对象有 folderId 属性
+          });
+          if(response.data.status == 1){
+            message.warning(response.data.warning);
+          }else{
+            fetchFiles();
+          }
+        } catch (error) {
+          console.error('获取文件列表失败:', error);
+        }
+    };
+
     const navigateTo = async (item, index) => {
       // 更新当前路径到点击的面包屑项目
       currentPath.value = currentPath.value.slice(0, index + 1);
@@ -456,16 +537,39 @@ export default defineComponent({
           render(row) {
             const isFolder = row.type === "0"; // 假设 0 代表文件夹
             if (isFolder) {
-              return h(
-                NButton,
-                {
-                  strong: true,
-                  tertiary: true,
-                  size: "small",
-                  onClick: () => enterFolder(row)
-                },
-                { default: () => "进入" }
-              );
+              return [ 
+                h(
+                  NButton,
+                  {
+                    strong: true,
+                    tertiary: true,
+                    size: "small",
+                    onClick: () => enterFolder(row)
+                  },
+                  { default: () => "进入" }
+                ),
+                h(
+                  NButton,
+                  {
+                    strong: true,
+                    tertiary: true,
+                    size: "small",
+                    onClick: () => showFolderRename(row)
+                  },
+                  { default: () => "重命名" }
+                ),
+                h(
+                  NButton,
+                  {
+                    strong: true,
+                    tertiary: true,
+                      type: "error",
+                    size: "small",
+                    onClick: () => deleteFolder(row)
+                  },
+                  { default: () => "删除" }
+                )
+              ];
             } else {
               return [
                 h(
@@ -646,6 +750,10 @@ export default defineComponent({
       userShowModal:UserShowModel,
       userFormRef,
       userFormValue,
+      renameFolderShowModal :renameFolderShowModel,
+      folderFormRef,
+      folderFormValue,
+      renameFolder,
       modifyUser,
       check,
       onNegativeClick() {
