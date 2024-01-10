@@ -585,6 +585,10 @@ export default defineComponent({
          title:"文件名",
          key: "fileName"
        },
+       {
+         title:"路径",
+         key: "path"
+       },
       ];
     };
 

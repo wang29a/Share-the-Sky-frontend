@@ -95,7 +95,7 @@
         </template> -->
       </n-card>
     </n-modal>
-  <n-modal v-model:show="userShowModal">
+  <n-modal v-model:show="userShowModel">
     <n-card
       style="width: 600px"
       title="修改用户信息"
@@ -126,7 +126,7 @@
     </n-form>
     </n-card>
   </n-modal>
-  <n-modal v-model:show="modifyUserShowModal">
+  <n-modal v-model:show="modifyUserShowModel">
     <n-card
       style="width: 600px"
       title="修改用户信息"
@@ -159,7 +159,7 @@
     </n-form>
     </n-card>
   </n-modal>
-  <n-modal v-model:show="renameFolderShowModal">
+  <n-modal v-model:show="renameFolderShowModel">
     <n-card
       style="width: 600px"
       title="修改文件夹名"
@@ -186,6 +186,34 @@
     </n-form>
     </n-card>
   </n-modal>
+  <n-modal v-model:show="renameFileShowModel">
+    <n-card
+      style="width: 600px"
+      title="修改文件名"
+      :bordered="false"
+      size="huge"
+      role="dialog"
+      aria-modal="true"
+    >
+    <n-form
+      ref="fileFormRef"
+      inline
+      :label-width="80"
+      :model="fileFormValue"
+      :size="size"
+    >
+      <n-form-item label="文件名" path="file.name">
+        <n-input v-model:value="fileFormValue.fileName" placeholder="输入fileName" />
+      </n-form-item>
+      <n-form-item>
+        <n-button attr-type="button" @click="renameFile">
+          修改
+        </n-button>
+      </n-form-item>
+    </n-form>
+    </n-card>
+  </n-modal>
+
 </template>
 
 <script>
@@ -236,11 +264,16 @@ export default defineComponent({
       email:"",
     });
     const renameFolderShowModel = ref(false);
+    const renameFileShowModel = ref(false);
     const folderFormRef = ref(null);
+    const fileFormRef = ref(null);
     const folderFormValue = ref({
       folderName:""
     });
-    
+    const fileFormValue = ref({
+      fileName:""
+    });
+
     const fetchFiles = async () => {
       try {
         console.log("get file list");
@@ -527,6 +560,16 @@ export default defineComponent({
         folderFormValue._value.folderId = row.folderId;
         renameFolderShowModel.value = true;
     }
+    const showFileRename = (row) => {
+        console.log("id:", row.fileId)
+        console.log("name:", row.fileName)
+        console.log("foldId:", row.folderId)
+        fileFormValue._value.fileName = row.fileName;
+        fileFormValue._value.fileId = row.fileId;
+        fileFormValue._value.folderId = row.folderId;
+        renameFileShowModel.value = true;
+    }
+
 
     const renameFolder = async () => {
       console.log("进入文件夹:", );
@@ -539,6 +582,29 @@ export default defineComponent({
             // userId: userToken,
             folderName: folderFormValue._value.folderName,
             folderId: parseInt(folderFormValue._value.folderId) // 假设 folder 对象有 folderId 属性
+          });
+          if(response.data.status == 2){
+            message.error(response.data.error);
+          }else{
+	    message.success("更改成功");
+            fetchFiles();
+          }
+        } catch (error) {
+          console.error('获取文件列表失败:', error);
+        }
+    };
+    const renameFile = async () => {
+      console.log("userId:", sessionStorage.getItem('userToken'));
+      console.log("fileId:", fileFormValue._value.fileId);
+      console.log("file新名:", fileFormValue._value.fileName);
+      console.log("folderId:", fileFormValue._value.folderId);
+      try {
+          const userToken = sessionStorage.getItem('userToken');
+          const response = await axios.post('/file/rename', {
+            // userId: userToken,
+            fileName: fileFormValue._value.fileName,
+            fileId: parseInt(fileFormValue._value.fileId), // 假设 folder 对象有 folderId 属性
+            folderId: parseInt(fileFormValue._value.folderId) 
           });
           if(response.data.status == 2){
             message.error(response.data.error);
@@ -705,6 +771,16 @@ export default defineComponent({
                   {
                     strong: true,
                     tertiary: true,
+                    size: "small",
+                    onClick: () => showFileRename(row)
+                  },
+                  { default: () => "重命名" }
+                ),
+                h(
+                  NButton,
+                  {
+                    strong: true,
+                    tertiary: true,
                     type: "error",
                     size: "small",
                     onClick: () => deleteFile(row)
@@ -857,14 +933,18 @@ export default defineComponent({
       shareHref,
       shareFile,
       showModal: shareModelShowModel,
-      modifyUserShowModal:modifyUserShowModel,
-      userShowModal:UserShowModel,
+      modifyUserShowModel:modifyUserShowModel,
+      userShowModel:UserShowModel,
       userFormRef,
       userFormValue,
-      renameFolderShowModal :renameFolderShowModel,
+      renameFolderShowModel :renameFolderShowModel,
+      renameFileShowModel :renameFileShowModel,
       folderFormRef,
       folderFormValue,
+      fileFormRef,
+      fileFormValue,
       renameFolder,
+      renameFile,
       modifyUser,
       check,
   //  const timeOptions = [
