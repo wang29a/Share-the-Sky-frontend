@@ -284,6 +284,7 @@ export default defineComponent({
           
           console.log("展示")
           console.log(response.data);
+          console.log("fileName: ", response.data.fileName);
           ownerData.value = response.data;
           ShowModel.value = true;
       })
@@ -414,8 +415,10 @@ export default defineComponent({
           message.success("修改用户信息成功");
           console.log("修改成功")
           fetchUser();
-        }else{
-          message.error("修改用户信息失败，用户名/邮箱重复");
+        }else if(response.data.status == 1){
+           message.warning(response.data.warning);
+        }else if(response.data.status == 2){
+           message.error(response.data.error);
         }
       })
       .catch(error => {
@@ -578,6 +581,10 @@ export default defineComponent({
           title: "用户名",
           key: "userName"
         },
+        {
+         title:"文件名",
+         key: "fileName"
+       },
       ];
     };
 
