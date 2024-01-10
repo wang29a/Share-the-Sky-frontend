@@ -135,7 +135,7 @@
 
 <script>
 import { ref, defineComponent, h, onMounted, computed } from 'vue';
-import { NIcon, create, NDropdown, NButton } from "naive-ui";
+import { NPopconfirm, NIcon, create, NDropdown, NButton } from "naive-ui";
 import axios from 'axios';
 import { useRouter } from 'vue-router';
 
@@ -219,6 +219,9 @@ export default defineComponent({
       }
     };
 
+    const nothing =  () => {
+      message.success("nothing happened"); 
+    };
     const fetchUser = async () => {
       try {
         console.log("get user list");
@@ -499,17 +502,34 @@ export default defineComponent({
                 },
                 { default: () => "Details" }
               ),
-              h(
-                NButton,
-                {
-                  strong: true,
-                  tertiary: true,
-                  type: "error",
-                  size: "small",
-                  onClick: () => deleteFile(row)
-                },
-                { default: () => "Delete" }
-              )
+              h(NPopconfirm,
+              {
+                 onPositiveClick: () => deleteFile(row),
+                 onNegativeClick: () => nothing(),
+              },
+              {
+                 trigger: () => h(NButton,{
+                    strong: true,
+                    tertiary: true,
+                    type: "error",
+                    size: "small",
+                   },
+                 {default: () => 'Delete'}
+                 ),
+                 default: () => '一切都将一去杳然，任何人都无法将其捕获。'
+              }),
+
+             // h(
+             //   NButton,
+             //   {
+             //     strong: true,
+             //     tertiary: true,
+             //     type: "error",
+             //     size: "small",
+             //     onClick: () => deleteFile(row)
+             //   },
+             //   { default: () => "Delete" }
+             // )
             ];
           }
         }
@@ -558,17 +578,34 @@ export default defineComponent({
                 },
                 { default: () => "修改" }
               ),
-              h(
-                NButton,
-                {
-                  strong: true,
-                  tertiary: true,
-                  type: "error",
-                  size: "small",
-                  onClick: () => deleteUser(row)
-                },
-                { default: () => "删除" }
-              )
+              
+              h(NPopconfirm,
+              {
+                 onPositiveClick: () => deleteUser(row),
+                 onNegativeClick: () => nothing(),
+              },
+              {
+                 trigger: () => h(NButton,{
+                    strong: true,
+                    tertiary: true,
+                    type: "error",
+                    size: "small",
+                   },
+                 {default: () => '删除'}
+                 ),
+                 default: () => '一切都将一去杳然，任何人都无法将其捕获。'
+              }),
+           //   h(
+           //     NButton,
+           //     {
+           //       strong: true,
+           //       tertiary: true,
+           //       type: "error",
+           //       size: "small",
+           //       onClick: () => deleteUser(row)
+           //     },
+           //     { default: () => "删除" }
+           //   )
             ];
           }
         }

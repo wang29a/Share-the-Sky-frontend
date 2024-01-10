@@ -220,7 +220,7 @@
 import { h, defineComponent, computed, onMounted, ref } from "vue";
 import { NIcon, NDropdown, NButton } from "naive-ui";
 import { useRouter } from 'vue-router';
-import { useMessage } from "naive-ui";
+import { useMessage, NPopconfirm  } from "naive-ui";
 import axios from 'axios';
 //import { defineComponent } from 'vue'
 import {
@@ -636,6 +636,9 @@ export default defineComponent({
           console.error('获取文件列表失败:', error);
         }
     };
+    const nothing =  () => {
+      message.success("nothing happened"); 
+    };
 
     const navigateTo = async (item, index) => {
       // 更新当前路径到点击的面包屑项目
@@ -729,17 +732,33 @@ export default defineComponent({
                   },
                   { default: () => "重命名" }
                 ),
-                h(
-                  NButton,
+                h(NPopconfirm,
                   {
-                    strong: true,
-                    tertiary: true,
-                      type: "error",
-                    size: "small",
-                    onClick: () => deleteFolder(row)
+                     onPositiveClick: () => deleteFolder(row),
+                     onNegativeClick: () => nothing(),
                   },
-                  { default: () => "删除" }
-                )
+                  {
+                     trigger: () => h(NButton,{
+                        strong: true,
+                        tertiary: true,
+                        type: "error",
+                        size: "small",
+                       },
+                     {default: () => '删除'}
+                     ),
+                     default: () => '一切都将一去杳然，任何人都无法将其捕获。'
+                  }),
+               // h(
+               //   NButton,
+               //   {
+               //     strong: true,
+               //     tertiary: true,
+               //       type: "error",
+               //     size: "small",
+               //     onClick: () => deleteFolder(row)
+               //   },
+               //   { default: () => "删除" }
+               // )
               ];
             } else {
               return [
@@ -776,17 +795,34 @@ export default defineComponent({
                   },
                   { default: () => "重命名" }
                 ),
-                h(
-                  NButton,
+                h(NPopconfirm,
                   {
-                    strong: true,
-                    tertiary: true,
-                    type: "error",
-                    size: "small",
-                    onClick: () => deleteFile(row)
+                     onPositiveClick: () => deleteFile(row),
+                     onNegativeClick: () => nothing(),
                   },
-                  { default: () => "删除" }
-                )
+                  {
+                     trigger: () => h(NButton,{
+                        strong: true,
+                        tertiary: true,
+                        type: "error",
+                        size: "small",
+                       },
+                     {default: () => '删除'}
+                     ),
+                     default: () => '一切都将一去杳然，任何人都无法将其捕获。'
+                  }),
+
+               // h(
+               //   NButton,
+               //   {
+               //     strong: true,
+               //     tertiary: true,
+               //     type: "error",
+               //     size: "small",
+               //     onClick: () => deleteFile(row)
+               //   },
+               //   { default: () => "删除" }
+               // )
               ];
             }
           }
