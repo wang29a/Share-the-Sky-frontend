@@ -38,6 +38,7 @@
       </div>
       <div v-if="selectedMenu === 'user-manage'">
         <!-- 用户管理相关内容 -->
+          <n-button @click="exportUserList">导出用户列表</n-button>
         <n-data-table
           :columns="userColumns"
           :data="userData"
@@ -611,6 +612,49 @@ export default defineComponent({
         }
       ];
     };
+    const convertJSONToCSV = (jsonData) => {
+    // Assuming jsonData is an array of objects
+      if (jsonData.length === 0) {
+          return '';
+      }
+
+      const headers = Object.keys(jsonData[0]);
+      const csvRows = jsonData.map(row => {
+          return headers.map(fieldName => {
+              let field = row[fieldName];
+              if (typeof field === 'string' && field.includes(',')) {
+                  field = `"${field}"`;
+              }
+              return field;
+          }).join(',');
+      });
+
+      csvRows.unshift(headers.join(','));
+      return csvRows.join('\r\n');
+    }
+
+    const downloadCSV = (csvData, filename = 'userData.csv') => {
+      const blob = new Blob([csvData], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      const url = URL.createObjectURL(blob);
+
+      link.setAttribute('href', url);
+      link.setAttribute('download', filename);
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link)
+    }
+
+    const exportUserList = async () => {
+      console.log("导出用户列表");
+      console.log("path:", "/");
+      const response = await 
+      axios.post('/drogon/user/listall', {userId:sessionStorage.getItem("userToken")});
+      console.log("响应消息：", response.data);
+      const fileListCSV = convertJSONToCSV(response.data);
+      downloadCSV(fileListCSV);
+    }
 
     const createOwnerColumns = () => {
       return [
@@ -652,6 +696,7 @@ export default defineComponent({
       addUserFormRef,
       addUserFormValue,
       addUser,
+      exportUserList,
     };
   }
 });

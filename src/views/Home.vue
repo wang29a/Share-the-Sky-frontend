@@ -910,7 +910,7 @@ export default defineComponent({
       return csvRows.join('\r\n');
     }
 
-  const downloadCSV = (csvData, filename = 'data.csv') => {
+  const downloadCSV = (csvData, filename = 'fileData.csv') => {
     const blob = new Blob([csvData], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     const url = URL.createObjectURL(blob);
