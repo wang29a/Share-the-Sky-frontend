@@ -36,7 +36,14 @@
           <n-button @click="jumpToShare">获得分享</n-button>
         </div>
         <div>
-        </div>
+           <n-progress type="line" :percentage="percentage" processing/>
+         </div>
+         <n-row>
+              <n-statistic label="剩余时间(秒)":value="duration">
+              </n-statistic>
+              <n-statistic label="速度(KiB/s)":value="speed">
+              </n-statistic>
+         </n-row>
         <n-button @click="goBack">返回上一层</n-button>
         <n-breadcrumb>
           <n-breadcrumb-item
@@ -88,7 +95,7 @@
         </template> -->
       </n-card>
     </n-modal>
-  <n-modal v-model:show="userShowModal">
+  <n-modal v-model:show="userShowModel">
     <n-card
       style="width: 600px"
       title="修改用户信息"
@@ -119,7 +126,7 @@
     </n-form>
     </n-card>
   </n-modal>
-  <n-modal v-model:show="modifyUserShowModal">
+  <n-modal v-model:show="modifyUserShowModel">
     <n-card
       style="width: 600px"
       title="修改用户信息"
@@ -152,7 +159,7 @@
     </n-form>
     </n-card>
   </n-modal>
-  <n-modal v-model:show="renameFolderShowModal">
+  <n-modal v-model:show="renameFolderShowModel">
     <n-card
       style="width: 600px"
       title="修改文件夹名"
@@ -179,13 +186,41 @@
     </n-form>
     </n-card>
   </n-modal>
+  <n-modal v-model:show="renameFileShowModel">
+    <n-card
+      style="width: 600px"
+      title="修改文件名"
+      :bordered="false"
+      size="huge"
+      role="dialog"
+      aria-modal="true"
+    >
+    <n-form
+      ref="fileFormRef"
+      inline
+      :label-width="80"
+      :model="fileFormValue"
+      :size="size"
+    >
+      <n-form-item label="文件名" path="file.name">
+        <n-input v-model:value="fileFormValue.fileName" placeholder="输入fileName" />
+      </n-form-item>
+      <n-form-item>
+        <n-button attr-type="button" @click="renameFile">
+          修改
+        </n-button>
+      </n-form-item>
+    </n-form>
+    </n-card>
+  </n-modal>
+
 </template>
 
 <script>
 import { h, defineComponent, computed, onMounted, ref } from "vue";
 import { NIcon, NDropdown, NButton } from "naive-ui";
 import { useRouter } from 'vue-router';
-import { useMessage } from "naive-ui";
+import { useMessage, NPopconfirm  } from "naive-ui";
 import axios from 'axios';
 //import { defineComponent } from 'vue'
 import {
@@ -207,6 +242,9 @@ const renderIcon = (icon) => {
 export default defineComponent({
   setup() {
     const router = useRouter();
+    const percentageRef = ref(0);
+    const durationRef = ref(0);
+    const speedRef = ref(0);
     const isAdmin = computed(() => sessionStorage.getItem("isAdmin") === "true");
     const data = ref([]);
     const selectedFile = ref(null);
@@ -226,11 +264,16 @@ export default defineComponent({
       email:"",
     });
     const renameFolderShowModel = ref(false);
+    const renameFileShowModel = ref(false);
     const folderFormRef = ref(null);
+    const fileFormRef = ref(null);
     const folderFormValue = ref({
       folderName:""
     });
-    
+    const fileFormValue = ref({
+      fileName:""
+    });
+
     const fetchFiles = async () => {
       try {
         console.log("get file list");
@@ -262,13 +305,40 @@ export default defineComponent({
       // 实现下载文件的逻辑
       const userToken = sessionStorage.getItem('userToken');
       console.log("下载文件:", row.fileName, row.fileId, userToken);
+
+      const startTime = new Date().getTime(); // 记录下载开始的时间
+      let lastUpdateTime = startTime; // 上次更新时间
+      const updateInterval = 1000; // 更新间隔（毫秒），这里设置为1秒
+      console.log("下载文件:", row.fileName, row.fileId, userToken);
       axios.get('/file/download', {
         params: {
           userid: userToken,
           fileid: row.fileId
         },
-        responseType: 'blob' // 重要: 设置响应类型为 blob
+        responseType: 'blob', // 重要: 设置响应类型为 blob
+
+        onDownloadProgress: progressEvent => {
+           const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+           console.log(`下载进度: ${percentCompleted}%`);
+           percentageRef.value = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+           const currentTime = new Date().getTime();
+           if (currentTime - lastUpdateTime > updateInterval) {
+               lastUpdateTime = currentTime; // 更新上次更新时间
+               const elapsed = (currentTime - startTime) / 1000; // 已经过去的时间（秒）
+               const speed = progressEvent.loaded / elapsed; // 每秒下载字节数
+               const remaining = progressEvent.total - progressEvent.loaded; // 剩余字节数
+               const remainingTime = (remaining / speed).toFixed(2); // 剩余时间（秒）
+               durationRef.value = remainingTime;
+               speedRef.value = (speed / 1024).toFixed(1);
+               console.log(`剩余时间: ${remainingTime}秒`);
+               console.log(`hh: ${speed}`);
+           }
+        }
       }).then(response => {
+	if(response.data.status == 2){
+		message.error(response.data.error);
+		return;
+	}
         // console.log("下载中",response);
         const url = window.URL.createObjectURL(new Blob([response.data]));
         // 创建一个链接用于下载
@@ -317,6 +387,10 @@ export default defineComponent({
         "time": 7*24,
         "fileName": row.fileName
       }).then(response => {
+	if(response.data.status == 2){
+		message.error(response.data.error);
+		return;
+	}
         console.log("分享成功", response);
         console.log("分享成功");
         shareModelShowModel.value = true;
@@ -341,6 +415,10 @@ export default defineComponent({
     const upLoadFile = () => {
       if (selectedFile.value && uploadPath.value) {
         const formData = new FormData();
+        const startTime = new Date().getTime(); // 记录下载开始的时间
+        let lastUpdateTime = startTime; // 上次更新时间
+        const updateInterval = 1000; // 更新间隔（毫秒），这里设置为1秒
+
         formData.append('file', selectedFile.value);
         console.log("file:", selectedFile.value)
         console.log("path:", uploadPath.value)
@@ -352,8 +430,38 @@ export default defineComponent({
           headers: {
             'Content-Type': 'multipart/form-data'
           },
+
+        onUploadProgress: progressEvent => {
+           const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+           percentageRef.value = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+           console.log(`上传进度: ${percentCompleted}%`); 
+           const currentTime = new Date().getTime();
+           if (currentTime - lastUpdateTime > updateInterval) {
+               lastUpdateTime = currentTime; // 更新上次更新时间
+               const elapsed = (currentTime - startTime) / 1000; // 已经过去的时间（秒）
+               const speed = progressEvent.loaded / elapsed; // 每秒下载字节数
+               const remaining = progressEvent.total - progressEvent.loaded; // 剩余字节数
+               const remainingTime = (remaining / speed).toFixed(2); // 剩余时间（秒）
+              // if(remainingTime < 0.5){
+              //         remainingTime = 0;
+              //         speed = 0;
+              // }
+               durationRef.value = remainingTime;
+               speedRef.value = (speed / 1024).toFixed(1);
+               console.log(`剩余时间: ${remainingTime}秒`);
+               console.log(`剩余时间hh: ${durationRef.value}秒`);
+           }
+
+        }    
         }).then(response => {
-          
+          if(response.data.status == 1){
+		  message.warning(warning);
+		  return;
+	   }else if(response.data.status == 2){
+		   message.error(error);
+		   return;
+	   }
+	   message.success("上传成功");
           console.log('上传成功', response);
           fetchFiles();
         }).catch(error => {
@@ -361,6 +469,10 @@ export default defineComponent({
         });
       } else if(selectedFile.value) {
         const formData = new FormData();
+        const startTime = new Date().getTime(); // 记录下载开始的时间
+        let lastUpdateTime = startTime; // 上次更新时间
+        const updateInterval = 1000; // 更新间隔（毫秒），这里设置为1秒
+
         formData.append('file', selectedFile.value);
         console.log("file:", selectedFile.value)
         console.log("path:", uploadPath.value)
@@ -372,6 +484,28 @@ export default defineComponent({
           headers: {
             'Content-Type': 'multipart/form-data'
           },
+        onUploadProgress: progressEvent => {
+           const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+           percentageRef.value = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+           console.log(`上传进度: ${percentCompleted}%`); 
+           const currentTime = new Date().getTime();
+           if (currentTime - lastUpdateTime > updateInterval) {
+               lastUpdateTime = currentTime; // 更新上次更新时间
+               const elapsed = (currentTime - startTime) / 1000; // 已经过去的时间（秒）
+               const speed = progressEvent.loaded / elapsed; // 每秒下载字节数
+               const remaining = progressEvent.total - progressEvent.loaded; // 剩余字节数
+               const remainingTime = (remaining / speed).toFixed(2); // 剩余时间（秒）
+               if(remainingTime < 1){
+                       remainingTime = 0;
+                       speed = 0;
+               }
+               durationRef.value = remainingTime;
+               speedRef.value = (speed / 1024).toFixed(1);
+               console.log(`剩余时间: ${remainingTime}秒`);
+               console.log(`剩余时间hh: ${durationRef.value}秒`);
+           }
+
+        }
         }).then(response => {
           if(response.data.status == 0){
               message.success("上传成功");
@@ -408,7 +542,9 @@ export default defineComponent({
           });
           if(response.data.status == 1){
             message.warning(response.data.warning);
-          }else{
+	  }else if(response.data.status == 2){
+		  message.error(response.data.error);
+	  }else{
               data.value = response.data; // 更新文件列表
               currentPath.value.push({ name: folder.folderName, id: folder.folderId });
           }
@@ -424,6 +560,16 @@ export default defineComponent({
         folderFormValue._value.folderId = row.folderId;
         renameFolderShowModel.value = true;
     }
+    const showFileRename = (row) => {
+        console.log("id:", row.fileId)
+        console.log("name:", row.fileName)
+        console.log("foldId:", row.folderId)
+        fileFormValue._value.fileName = row.fileName;
+        fileFormValue._value.fileId = row.fileId;
+        fileFormValue._value.folderId = row.folderId;
+        renameFileShowModel.value = true;
+    }
+
 
     const renameFolder = async () => {
       console.log("进入文件夹:", );
@@ -437,9 +583,33 @@ export default defineComponent({
             folderName: folderFormValue._value.folderName,
             folderId: parseInt(folderFormValue._value.folderId) // 假设 folder 对象有 folderId 属性
           });
-          if(response.data.status == 1){
-            message.warning(response.data.warning);
+          if(response.data.status == 2){
+            message.error(response.data.error);
           }else{
+	    message.success("更改成功");
+            fetchFiles();
+          }
+        } catch (error) {
+          console.error('获取文件列表失败:', error);
+        }
+    };
+    const renameFile = async () => {
+      console.log("userId:", sessionStorage.getItem('userToken'));
+      console.log("fileId:", fileFormValue._value.fileId);
+      console.log("file新名:", fileFormValue._value.fileName);
+      console.log("folderId:", fileFormValue._value.folderId);
+      try {
+          const userToken = sessionStorage.getItem('userToken');
+          const response = await axios.post('/file/rename', {
+            // userId: userToken,
+            fileName: fileFormValue._value.fileName,
+            fileId: parseInt(fileFormValue._value.fileId), // 假设 folder 对象有 folderId 属性
+            folderId: parseInt(fileFormValue._value.folderId) 
+          });
+          if(response.data.status == 2){
+            message.error(response.data.error);
+          }else{
+	    message.success("更改成功");
             fetchFiles();
           }
         } catch (error) {
@@ -456,14 +626,18 @@ export default defineComponent({
             // userId: userToken,
             folderId: parseInt(row.folderId) // 假设 folder 对象有 folderId 属性
           });
-          if(response.data.status == 1){
-            message.warning(response.data.warning);
+          if(response.data.status == 2){
+            message.error(response.data.error);
           }else{
+            message.success("删除成功");
             fetchFiles();
           }
         } catch (error) {
           console.error('获取文件列表失败:', error);
         }
+    };
+    const nothing =  () => {
+      message.success("nothing happened"); 
     };
 
     const navigateTo = async (item, index) => {
@@ -558,17 +732,33 @@ export default defineComponent({
                   },
                   { default: () => "重命名" }
                 ),
-                h(
-                  NButton,
+                h(NPopconfirm,
                   {
-                    strong: true,
-                    tertiary: true,
-                      type: "error",
-                    size: "small",
-                    onClick: () => deleteFolder(row)
+                     onPositiveClick: () => deleteFolder(row),
+                     onNegativeClick: () => nothing(),
                   },
-                  { default: () => "删除" }
-                )
+                  {
+                     trigger: () => h(NButton,{
+                        strong: true,
+                        tertiary: true,
+                        type: "error",
+                        size: "small",
+                       },
+                     {default: () => '删除'}
+                     ),
+                     default: () => '一切都将一去杳然，任何人都无法将其捕获。'
+                  }),
+               // h(
+               //   NButton,
+               //   {
+               //     strong: true,
+               //     tertiary: true,
+               //       type: "error",
+               //     size: "small",
+               //     onClick: () => deleteFolder(row)
+               //   },
+               //   { default: () => "删除" }
+               // )
               ];
             } else {
               return [
@@ -590,6 +780,9 @@ export default defineComponent({
                     size: "small",
                     onClick: () => shareFile(row)
                   },
+//			<n-dropdown trigger = "hover" :timeOptions = "timeOptions" @select = "shareFile(row)">
+//			<n-button>分享</n-button>
+//			</n-dropdown>
                   { default: () => "分享" }
                 ),
                 h(
@@ -597,12 +790,39 @@ export default defineComponent({
                   {
                     strong: true,
                     tertiary: true,
-                    type: "error",
                     size: "small",
-                    onClick: () => deleteFile(row)
+                    onClick: () => showFileRename(row)
                   },
-                  { default: () => "删除" }
-                )
+                  { default: () => "重命名" }
+                ),
+                h(NPopconfirm,
+                  {
+                     onPositiveClick: () => deleteFile(row),
+                     onNegativeClick: () => nothing(),
+                  },
+                  {
+                     trigger: () => h(NButton,{
+                        strong: true,
+                        tertiary: true,
+                        type: "error",
+                        size: "small",
+                       },
+                     {default: () => '删除'}
+                     ),
+                     default: () => '一切都将一去杳然，任何人都无法将其捕获。'
+                  }),
+
+               // h(
+               //   NButton,
+               //   {
+               //     strong: true,
+               //     tertiary: true,
+               //     type: "error",
+               //     size: "small",
+               //     onClick: () => deleteFile(row)
+               //   },
+               //   { default: () => "删除" }
+               // )
               ];
             }
           }
@@ -733,6 +953,9 @@ export default defineComponent({
       pagination: false,
       fileInput,
       selectedFile,
+      percentage: percentageRef,                                
+      duration: durationRef,
+      speed: speedRef,
       uploadPath,
       upLoadFile,
       handleFileChange,
@@ -746,16 +969,26 @@ export default defineComponent({
       shareHref,
       shareFile,
       showModal: shareModelShowModel,
-      modifyUserShowModal:modifyUserShowModel,
-      userShowModal:UserShowModel,
+      modifyUserShowModel:modifyUserShowModel,
+      userShowModel:UserShowModel,
       userFormRef,
       userFormValue,
-      renameFolderShowModal :renameFolderShowModel,
+      renameFolderShowModel :renameFolderShowModel,
+      renameFileShowModel :renameFileShowModel,
       folderFormRef,
       folderFormValue,
+      fileFormRef,
+      fileFormValue,
       renameFolder,
+      renameFile,
       modifyUser,
       check,
+  //  const timeOptions = [
+  //    { label: "1小时", value: 1 },
+  //    { label: "1天", value: 24 },
+  //    { label: "1周", value: 168 },
+  //    { label: "1个月", value: 744 }
+  //  ],
       onNegativeClick() {
         message.success("Cancel");
         shareModelShowModel.value = false;

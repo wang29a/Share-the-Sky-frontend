@@ -135,7 +135,7 @@
 
 <script>
 import { ref, defineComponent, h, onMounted, computed } from 'vue';
-import { NIcon, create, NDropdown, NButton } from "naive-ui";
+import { NPopconfirm, NIcon, create, NDropdown, NButton } from "naive-ui";
 import axios from 'axios';
 import { useRouter } from 'vue-router';
 
@@ -219,6 +219,9 @@ export default defineComponent({
       }
     };
 
+    const nothing =  () => {
+      message.success("nothing happened"); 
+    };
     const fetchUser = async () => {
       try {
         console.log("get user list");
@@ -239,7 +242,9 @@ export default defineComponent({
       console.log("fileId:", row.fileId);
       axios.get('/file/download/admin', {
         params: {
-          fileid: row.fileId
+          fileid: row.fileId,
+          userId : sessionStorage.getItem("userToken")
+
         },
         responseType: 'blob' // 重要: 设置响应类型为 blob
       }).then(response => {
@@ -272,8 +277,17 @@ export default defineComponent({
         "userId" : sessionStorage.getItem("userToken")
       })
       .then(response => {
+          if(response.data.status == 1){
+              message.warning(response.data.warning);
+              return;
+          }else if(response.data.status == 2){
+              message.error(response.data.error);
+              return;
+          }
+          
           console.log("展示")
           console.log(response.data);
+          console.log("fileName: ", response.data.fileName);
           ownerData.value = response.data;
           ShowModel.value = true;
       })
@@ -288,8 +302,8 @@ export default defineComponent({
       console.log("文件名：", row.fileName);
       console.log("文件信息：", row.fileType);
       axios.post("/file/deleteadmin", {
-        "fileId" : row.fileId
-       // "userId" : sessionStorage.getItem("userToken")
+        "fileId" : row.fileId,
+        "userId" : sessionStorage.getItem("userToken")
       })
       .then(response => {
         if (response.data.status == 0){
@@ -404,8 +418,10 @@ export default defineComponent({
           message.success("修改用户信息成功");
           console.log("修改成功")
           fetchUser();
-        }else{
-          message.error("修改用户信息失败，用户名/邮箱重复");
+        }else if(response.data.status == 1){
+           message.warning(response.data.warning);
+        }else if(response.data.status == 2){
+           message.error(response.data.error);
         }
       })
       .catch(error => {
@@ -429,9 +445,11 @@ export default defineComponent({
           message.success("添加用户成功");
           console.log("添加成功")
           fetchUser();
-        }else{
-          message.error("添加用户失败，用户名/邮箱重复");
-        }
+        }else if(response.data.status == 1){
+          message.error(response.data.warning);
+        }else if(response.data.status == 2){
+          message.error(response.data.error);
+        } 
       })
       .catch(error => {
         message.error("添加用户失败，用户名/邮箱重复");
@@ -484,17 +502,34 @@ export default defineComponent({
                 },
                 { default: () => "Details" }
               ),
-              h(
-                NButton,
-                {
-                  strong: true,
-                  tertiary: true,
-                  type: "error",
-                  size: "small",
-                  onClick: () => deleteFile(row)
-                },
-                { default: () => "Delete" }
-              )
+              h(NPopconfirm,
+              {
+                 onPositiveClick: () => deleteFile(row),
+                 onNegativeClick: () => nothing(),
+              },
+              {
+                 trigger: () => h(NButton,{
+                    strong: true,
+                    tertiary: true,
+                    type: "error",
+                    size: "small",
+                   },
+                 {default: () => 'Delete'}
+                 ),
+                 default: () => '一切都将一去杳然，任何人都无法将其捕获。'
+              }),
+
+             // h(
+             //   NButton,
+             //   {
+             //     strong: true,
+             //     tertiary: true,
+             //     type: "error",
+             //     size: "small",
+             //     onClick: () => deleteFile(row)
+             //   },
+             //   { default: () => "Delete" }
+             // )
             ];
           }
         }
@@ -543,17 +578,34 @@ export default defineComponent({
                 },
                 { default: () => "修改" }
               ),
-              h(
-                NButton,
-                {
-                  strong: true,
-                  tertiary: true,
-                  type: "error",
-                  size: "small",
-                  onClick: () => deleteUser(row)
-                },
-                { default: () => "删除" }
-              )
+              
+              h(NPopconfirm,
+              {
+                 onPositiveClick: () => deleteUser(row),
+                 onNegativeClick: () => nothing(),
+              },
+              {
+                 trigger: () => h(NButton,{
+                    strong: true,
+                    tertiary: true,
+                    type: "error",
+                    size: "small",
+                   },
+                 {default: () => '删除'}
+                 ),
+                 default: () => '一切都将一去杳然，任何人都无法将其捕获。'
+              }),
+           //   h(
+           //     NButton,
+           //     {
+           //       strong: true,
+           //       tertiary: true,
+           //       type: "error",
+           //       size: "small",
+           //       onClick: () => deleteUser(row)
+           //     },
+           //     { default: () => "删除" }
+           //   )
             ];
           }
         }
@@ -566,6 +618,14 @@ export default defineComponent({
           title: "用户名",
           key: "userName"
         },
+        {
+         title:"文件名",
+         key: "fileName"
+       },
+       {
+         title:"路径",
+         key: "path"
+       },
       ];
     };
 
