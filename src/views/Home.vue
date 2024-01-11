@@ -34,6 +34,7 @@
           <input type="file" @change="handleFileChange" ref="fileInput">
           <n-button @click="upLoadFile">上传文件</n-button>
           <n-button @click="jumpToShare">获得分享</n-button>
+          <n-button @click="exportFileList">导出文件列表</n-button>
         </div>
         <div>
            <n-progress type="line" :percentage="percentage" processing/>
@@ -283,6 +284,7 @@ export default defineComponent({
         const response = await 
         axios.post('/file/list', {path:"/", folderId: parseInt(root)});
         data.value = response.data; // 使用后端返回的文件列表
+        console.log(response.data);
       } catch (error) {
         console.error('获取文件列表失败:', error);
       }
@@ -887,6 +889,50 @@ export default defineComponent({
         console.error("修改用户失败", error)
       });
     }
+    const convertJSONToCSV = (jsonData) => {
+    // Assuming jsonData is an array of objects
+      if (jsonData.length === 0) {
+          return '';
+      }
+
+      const headers = Object.keys(jsonData[0]);
+      const csvRows = jsonData.map(row => {
+          return headers.map(fieldName => {
+              let field = row[fieldName];
+              if (typeof field === 'string' && field.includes(',')) {
+                  field = `"${field}"`;
+              }
+              return field;
+          }).join(',');
+      });
+
+      csvRows.unshift(headers.join(','));
+      return csvRows.join('\r\n');
+    }
+
+  const downloadCSV = (csvData, filename = 'data.csv') => {
+    const blob = new Blob([csvData], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+
+    link.setAttribute('href', url);
+    link.setAttribute('download', filename);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link)
+  }
+
+    const exportFileList = async () => {
+      console.log("导出文件列表");
+      console.log("path:", "/");
+      const response = await 
+      axios.post('/file/list/user', {userId:sessionStorage.getItem("userToken")});
+      console.log("响应消息：", response.data);
+      const fileListCSV = convertJSONToCSV(response.data);
+      downloadCSV(fileListCSV);
+    }
+
 
     const handleSelect = (key) => {
       console.log("key:", key)
@@ -983,6 +1029,7 @@ export default defineComponent({
       renameFile,
       modifyUser,
       check,
+      exportFileList,
   //  const timeOptions = [
   //    { label: "1小时", value: 1 },
   //    { label: "1天", value: 24 },
